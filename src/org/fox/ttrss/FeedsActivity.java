@@ -31,6 +31,8 @@ public class FeedsActivity extends OnlineActivity implements HeadlinesEventListe
 	protected long m_lastRefresh = 0;
 	
 	private boolean m_actionbarUpEnabled = false;
+
+    private MenuItem marked_item;
 	
 	@SuppressLint("NewApi")
 	@Override
@@ -170,7 +172,13 @@ public class FeedsActivity extends OnlineActivity implements HeadlinesEventListe
 						m_menu.findItem(R.id.toggle_attachments).setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
 					}
 					m_menu.findItem(R.id.toggle_attachments).setVisible(false);
-				}
+                }
+
+                if (af.getSelectedArticle() != null) {
+                    marked_item = m_menu.findItem(R.id.toggle_marked);
+                    marked_item.setChecked(af.getSelectedArticle().marked);
+                    marked_item.setIcon(af.getSelectedArticle().marked ? R.drawable.ic_menu_marked_checked : R.drawable.ic_menu_marked_unchecked);
+                }
 			}
 			
 			MenuItem item = m_menu.findItem(R.id.show_feeds);
@@ -305,7 +313,18 @@ public class FeedsActivity extends OnlineActivity implements HeadlinesEventListe
 		initMenu();
 	}
 
-	@Override
+    @Override
+    public void saveArticleMarked(Article article) {
+        Log.d(TAG, "saveARticleMarked");
+        if (marked_item != null) {
+            Log.d(TAG, "Setting marked");
+            marked_item.setChecked(article.marked);
+            marked_item.setIcon(article.marked ? R.drawable.ic_menu_marked_checked : R.drawable.ic_menu_marked_unchecked);
+        }
+        super.saveArticleMarked(article);
+    }
+
+    @Override
 	public void onArticleListSelectionChange(ArticleList m_selectedArticles) {
 		initMenu();		
 	}

@@ -83,6 +83,7 @@ public class OnlineActivity extends CommonActivity {
 	
 	@TargetApi(11)
 	private class HeadlinesActionModeCallback implements ActionMode.Callback {
+        MenuItem marked;
 		
 		@Override
 		public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
@@ -92,7 +93,7 @@ public class OnlineActivity extends CommonActivity {
 		@Override
 		public void onDestroyActionMode(ActionMode mode) {
 			HeadlinesFragment hf = (HeadlinesFragment) getSupportFragmentManager().findFragmentByTag(FRAG_HEADLINES);
-			
+
 			if (hf != null) {
 				ArticleList selected = hf.getSelectedArticles();
 				if (selected.size() > 0) {
@@ -107,10 +108,15 @@ public class OnlineActivity extends CommonActivity {
 		
 		@Override
 		public boolean onCreateActionMode(ActionMode mode, Menu menu) {
-			
+            Log.d(TAG, "onCreateActionMode");
 			 MenuInflater inflater = getMenuInflater();
 	            inflater.inflate(R.menu.headlines_action_menu, menu);
-			
+
+            marked = menu.findItem(R.id.selection_toggle_marked);
+            if (marked != null) {
+                Log.d(TAG, "Marked is now set");
+            }
+
 			return true;
 		}
 		
@@ -119,6 +125,10 @@ public class OnlineActivity extends CommonActivity {
 			onOptionsItemSelected(item);
 			return false;
 		}
+
+        public void setMarked(boolean state) {
+            if (marked != null) marked.setChecked(state);
+        }
 	};
 	
 	protected String getSessionId() {
@@ -452,7 +462,7 @@ public class OnlineActivity extends CommonActivity {
 		
 		finish();
 	}
-	
+
 	public void checkTrial(boolean notify) {
 		boolean isTrial = getPackageManager().checkSignatures(
 				getPackageName(), "org.fox.ttrss.key") != PackageManager.SIGNATURE_MATCH;
@@ -510,7 +520,7 @@ public class OnlineActivity extends CommonActivity {
 			//toast(R.string.trial_thanks);
 		}
 	}
-	
+
 	private void openUnlockUrl() {
 		try {
 			Intent intent = new Intent(Intent.ACTION_VIEW, 
@@ -727,8 +737,10 @@ public class OnlineActivity extends CommonActivity {
 			if (ap != null & ap.getSelectedArticle() != null) {
 				Article a = ap.getSelectedArticle();
 				a.marked = !a.marked;
+                Log.d(TAG, "Marked called by " + toString() + " new state: " + a.marked);
 				saveArticleMarked(a);
 				if (hf != null) hf.notifyUpdated();
+                if (m_headlinesActionModeCallback != null) m_headlinesActionModeCallback.setMarked(a.marked);
 			}
 			return true;
 		case R.id.selection_select_none:

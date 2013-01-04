@@ -73,6 +73,7 @@
             <item
                 android:id="@+id/selection_toggle_marked"
                 android:icon="@drawable/ic_menu_marked"
+                android:checkable="true"
                 android:showAsAction="ifRoom"
                 android:title="@string/selection_toggle_marked"/>
             <item
