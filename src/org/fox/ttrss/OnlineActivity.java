@@ -168,7 +168,7 @@ public class OnlineActivity extends CommonActivity {
 		if (isOffline) {
 			switchOfflineSuccess();			
 		} else {
-			checkTrial(false);
+			//checkTrial(false);
 			
 			/* if (getIntent().getExtras() != null) {
 				Intent i = getIntent();
