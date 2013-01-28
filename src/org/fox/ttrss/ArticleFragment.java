@@ -3,7 +3,6 @@ package org.fox.ttrss;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 
 import org.fox.ttrss.types.Article;
@@ -14,6 +13,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import android.annotation.SuppressLint;
+import android.app.ActionBar;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -36,9 +36,6 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebSettings.LayoutAlgorithm;
 import android.webkit.WebView;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.Spinner;
 import android.widget.TextView;
 
 public class ArticleFragment extends Fragment implements GestureDetector.OnDoubleTapListener {

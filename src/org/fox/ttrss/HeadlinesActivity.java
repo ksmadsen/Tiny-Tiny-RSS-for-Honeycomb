@@ -10,7 +10,6 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
-import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
 import android.util.Log;
 import android.view.MenuItem;
@@ -74,7 +73,7 @@ public class HeadlinesActivity extends OnlineActivity implements HeadlinesEventL
 						HeadlinesFragment hf = new HeadlinesFragment(feed, article);
 						hf.setSearchQuery(searchQuery);
 
-						ArticlePager af = new ArticlePager(hf.getArticleById(article.id), feed);
+						ArticlePager af = new ArticlePager(article != null ? hf.getArticleById(article.id) : new Article(), feed);
 						af.setSearchQuery(searchQuery);
 
 						ft.replace(R.id.headlines_fragment, hf, FRAG_HEADLINES);
