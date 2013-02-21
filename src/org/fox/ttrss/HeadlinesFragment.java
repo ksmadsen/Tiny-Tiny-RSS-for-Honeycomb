@@ -1,7 +1,5 @@
 package org.fox.ttrss;
 
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -11,24 +9,20 @@ import java.util.TimeZone;
 
 import org.fox.ttrss.types.Article;
 import org.fox.ttrss.types.ArticleList;
-import org.fox.ttrss.types.Attachment;
 import org.fox.ttrss.types.Feed;
 import org.fox.ttrss.util.HeadlinesRequest;
 import org.jsoup.Jsoup;
 
 import android.app.Activity;
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
-import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.text.Html;
 import android.text.Html.ImageGetter;
-import android.text.method.LinkMovementMethod;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
@@ -43,12 +37,9 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.CheckBox;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ListView;
-import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.google.gson.JsonElement;
@@ -93,7 +84,10 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 
 	public HeadlinesFragment(Feed feed, Article activeArticle) {
 		m_feed = feed;
-		m_activeArticle = getArticleById(activeArticle.id);
+		
+		if (activeArticle != null) {
+			m_activeArticle = getArticleById(activeArticle.id);
+		}
 	}
 
 	public HeadlinesFragment() {
@@ -297,8 +291,10 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 		}
 
 		if (m_articles.size() == 0 || !m_feed.equals(GlobalState.getInstance().m_activeFeed)) {
-			refresh(false);
-			GlobalState.getInstance().m_activeFeed = m_feed;
+			if (m_activity.getSupportFragmentManager().findFragmentByTag(CommonActivity.FRAG_ARTICLE) == null) {
+				refresh(false);
+				GlobalState.getInstance().m_activeFeed = m_feed;
+			}			
 		} else {
 			notifyUpdated();
 		}
@@ -360,6 +356,14 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 				@Override
 				protected void onPostExecute(JsonElement result) {
 					if (isDetached()) return;
+					
+					if (getView() != null) {
+						ListView list = (ListView)getView().findViewById(R.id.headlines);
+					
+						if (list != null) {
+							list.setEmptyView(getView().findViewById(R.id.no_headlines));
+						}
+					}
 					
 					m_activity.setProgressBarVisibility(false);
 					

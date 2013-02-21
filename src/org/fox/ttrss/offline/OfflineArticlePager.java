@@ -16,6 +16,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 
 public class OfflineArticlePager extends Fragment {
 	private final String TAG = this.getClass().getSimpleName();
@@ -79,7 +80,7 @@ public class OfflineArticlePager extends Fragment {
 			
 			if (m_cursor.moveToPosition(position)) {
 				
-				if (m_prefs.getBoolean("dim_status_bar", false) && getView() != null) {
+				if (m_prefs.getBoolean("dim_status_bar", false) && getView() != null && !m_activity.isCompatMode()) {
 					getView().setSystemUiVisibility(View.STATUS_BAR_HIDDEN);
 				}
 				
@@ -92,6 +93,24 @@ public class OfflineArticlePager extends Fragment {
 		@Override
 		public int getCount() {
 			return m_cursor.getCount();
+		}
+	}
+	
+	@Override
+	public void onResume() {
+		super.onResume();
+		
+		if (!m_activity.isCompatMode() && m_prefs.getBoolean("dim_status_bar", false)) {
+			getView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE);
+		}
+		
+		if (m_prefs.getBoolean("full_screen_mode", false)) {
+			m_activity.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                    WindowManager.LayoutParams.FLAG_FULLSCREEN);
+			
+			/* if (!m_activity.isCompatMode()) {
+	            m_activity.getActionBar().hide();
+	         } */
 		}
 	}
 	
@@ -117,6 +136,10 @@ public class OfflineArticlePager extends Fragment {
 			m_feedId = savedInstanceState.getInt("feedId", 0);
 			m_isCat = savedInstanceState.getBoolean("isCat", false);
 		}
+		
+		Log.d(TAG, "feed=" + m_feedId + "; iscat=" + m_isCat);
+		
+		m_cursor = createCursor();
 		
 		m_adapter = new PagerAdapter(getActivity().getSupportFragmentManager());
 		
@@ -183,8 +206,6 @@ public class OfflineArticlePager extends Fragment {
 		m_listener = (OfflineHeadlinesEventListener)activity;
 		
 		m_prefs = PreferenceManager.getDefaultSharedPreferences(getActivity().getApplicationContext());
-		
-		m_cursor = createCursor();
 			
 	}
 	

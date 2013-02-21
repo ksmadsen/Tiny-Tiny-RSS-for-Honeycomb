@@ -3,7 +3,6 @@ package org.fox.ttrss;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 
 import org.fox.ttrss.types.Article;
@@ -21,13 +20,11 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
-import android.util.Log;
 import android.util.TypedValue;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
-import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -36,9 +33,6 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebSettings.LayoutAlgorithm;
 import android.webkit.WebView;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.Spinner;
 import android.widget.TextView;
 
 public class ArticleFragment extends Fragment implements GestureDetector.OnDoubleTapListener {
@@ -47,8 +41,6 @@ public class ArticleFragment extends Fragment implements GestureDetector.OnDoubl
 	private SharedPreferences m_prefs;
 	private Article m_article;
 	private OnlineActivity m_activity;
-	//private Article m_nextArticle;
-	//private Article m_prevArticle;
 	private GestureDetector m_detector;
 	
 	public ArticleFragment() {
@@ -62,28 +54,6 @@ public class ArticleFragment extends Fragment implements GestureDetector.OnDoubl
 	}
 	
 	private View.OnTouchListener m_gestureListener;
-	
-	@Override
-	public boolean onContextItemSelected(MenuItem item) {
-		/* AdapterContextMenuInfo info = (AdapterContextMenuInfo) item
-				.getMenuInfo(); */
-		
-		switch (item.getItemId()) {
-		case R.id.article_link_share:
-			if (true) {
-				((OnlineActivity) getActivity()).shareArticle(m_article);
-			}
-			return true;
-		case R.id.article_link_copy:
-			if (true) {
-				((OnlineActivity) getActivity()).copyToClipboard(m_article.link);
-			}
-			return true;
-		default:
-			Log.d(TAG, "onContextItemSelected, unhandled id=" + item.getItemId());
-			return super.onContextItemSelected(item);
-		}
-	}
 	
 	@Override
 	public void onCreateContextMenu(ContextMenu menu, View v,
@@ -207,6 +177,8 @@ public class ArticleFragment extends Fragment implements GestureDetector.OnDoubl
 			    }
 
 				if (m_prefs.getString("theme", "THEME_DARK").equals("THEME_DARK")) {
+					cssOverride = "body { background : transparent; color : #e0e0e0}";
+				} else if (m_prefs.getString("theme", "THEME_DARK").equals("THEME_DARK_GRAY")) {
 					cssOverride = "body { background : transparent; color : #e0e0e0}";
 				} else {
 					cssOverride = "body { background : transparent; }";
