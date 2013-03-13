@@ -190,12 +190,13 @@ public class OfflineArticleFragment extends Fragment implements GestureDetector.
 
 				if (m_prefs.getString("theme", "THEME_DARK").equals("THEME_DARK")) {
 					cssOverride = "body { background : transparent; color : #e0e0e0}";
-					//view.setBackgroundColor(android.R.color.black);
-					web.setBackgroundColor(getResources().getColor(android.R.color.transparent));
+				} else if (m_prefs.getString("theme", "THEME_DARK").equals("THEME_DARK_GRAY")) {
+					cssOverride = "body { background : transparent; color : #e0e0e0}";
 				} else {
-					cssOverride = "";
+					cssOverride = "body { background : transparent; }";
 				}
-
+				web.setBackgroundColor(getResources().getColor(android.R.color.transparent));
+				
 				String hexColor = String.format("#%06X", (0xFFFFFF & tv.data));
 			    cssOverride += " a:link {color: "+hexColor+";} a:visited { color: "+hexColor+";}";
 				

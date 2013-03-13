@@ -147,6 +147,8 @@ public class OnlineActivity extends CommonActivity {
 			setTheme(R.style.DarkTheme);
 		} else if (m_prefs.getString("theme", "THEME_DARK").equals("THEME_SEPIA")) {
 			setTheme(R.style.SepiaTheme);
+		} else if (m_prefs.getString("theme", "THEME_DARK").equals("THEME_DARK_GRAY")) {
+			setTheme(R.style.DarkGrayTheme);
 		} else {
 			setTheme(R.style.LightTheme);
 		}
@@ -532,6 +534,31 @@ public class OnlineActivity extends CommonActivity {
 				e.printStackTrace();
 				toast(R.string.error_other_error);
 			}
+		}
+	}
+	
+	@Override
+	public boolean onContextItemSelected(MenuItem item) {
+		/* AdapterContextMenuInfo info = (AdapterContextMenuInfo) item
+				.getMenuInfo(); */
+		
+		final ArticlePager ap = (ArticlePager)getSupportFragmentManager().findFragmentByTag(FRAG_ARTICLE);
+		
+		switch (item.getItemId()) {
+		case R.id.article_link_share:
+			if (ap != null && ap.getSelectedArticle() != null) {
+				shareArticle(ap.getSelectedArticle());
+			}
+			return true;
+		case R.id.article_link_copy:
+			Log.d(TAG, "article_link_copy");
+			if (ap != null && ap.getSelectedArticle() != null) {
+				copyToClipboard(ap.getSelectedArticle().link);
+			}
+			return true;
+		default:
+			Log.d(TAG, "onContextItemSelected, unhandled id=" + item.getItemId());
+			return super.onContextItemSelected(item);
 		}
 	}
 	

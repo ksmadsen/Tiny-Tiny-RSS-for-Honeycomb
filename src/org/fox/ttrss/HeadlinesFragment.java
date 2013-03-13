@@ -291,8 +291,10 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 		}
 
 		if (m_articles.size() == 0 || !m_feed.equals(GlobalState.getInstance().m_activeFeed)) {
-			refresh(false);
-			GlobalState.getInstance().m_activeFeed = m_feed;
+			if (m_activity.getSupportFragmentManager().findFragmentByTag(CommonActivity.FRAG_ARTICLE) == null) {
+				refresh(false);
+				GlobalState.getInstance().m_activeFeed = m_feed;
+			}			
 		} else {
 			notifyUpdated();
 		}
@@ -354,6 +356,14 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 				@Override
 				protected void onPostExecute(JsonElement result) {
 					if (isDetached()) return;
+					
+					if (getView() != null) {
+						ListView list = (ListView)getView().findViewById(R.id.headlines);
+					
+						if (list != null) {
+							list.setEmptyView(getView().findViewById(R.id.no_headlines));
+						}
+					}
 					
 					m_activity.setProgressBarVisibility(false);
 					
