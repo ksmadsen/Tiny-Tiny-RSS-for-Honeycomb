@@ -218,9 +218,10 @@ public class ArticlePager extends Fragment {
 				put("include_attachments", "true");
 				put("limit", String.valueOf(HeadlinesFragment.HEADLINES_REQUEST_SIZE));
 				put("offset", String.valueOf(0));
-				put("view_mode", showUnread ? "adaptive" : "all_articles");
+				put("view_mode", m_activity.getViewMode());
 				put("skip", String.valueOf(fskip));
 				put("include_nested", "true");
+				put("order_by", m_prefs.getBoolean("oldest_first", false) ? "date_reverse" : "");
 				
 				if (feed.is_cat) put("is_cat", "true");
 				

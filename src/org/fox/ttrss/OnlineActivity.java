@@ -7,6 +7,7 @@ import java.util.List;
 import org.fox.ttrss.offline.OfflineActivity;
 import org.fox.ttrss.offline.OfflineDownloadService;
 import org.fox.ttrss.offline.OfflineUploadService;
+import org.fox.ttrss.share.SubscribeActivity;
 import org.fox.ttrss.types.Article;
 import org.fox.ttrss.types.ArticleList;
 import org.fox.ttrss.types.Feed;
@@ -38,6 +39,8 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
+import android.webkit.WebView;
+import android.webkit.WebView.HitTestResult;
 import android.widget.EditText;
 import android.widget.SearchView;
 import android.widget.ShareActionProvider;
@@ -59,6 +62,8 @@ public class OnlineActivity extends CommonActivity {
 	
 	private ActionMode m_headlinesActionMode;
 	private HeadlinesActionModeCallback m_headlinesActionModeCallback;
+
+	private String m_lastImageHitTestUrl;
 
 	private BroadcastReceiver m_broadcastReceiver = new BroadcastReceiver() {
 		@Override
@@ -545,6 +550,29 @@ public class OnlineActivity extends CommonActivity {
 		final ArticlePager ap = (ArticlePager)getSupportFragmentManager().findFragmentByTag(FRAG_ARTICLE);
 		
 		switch (item.getItemId()) {
+		case R.id.article_img_open:
+			if (getLastContentImageHitTestUrl() != null) {
+				try {
+					Intent intent = new Intent(Intent.ACTION_VIEW, 
+							Uri.parse(getLastContentImageHitTestUrl()));
+					startActivity(intent);
+				} catch (Exception e) {
+					e.printStackTrace();
+					toast(R.string.error_other_error);
+				}
+			}			
+			return true;
+		case R.id.article_img_share:
+			if (getLastContentImageHitTestUrl() != null) {
+				Intent intent = new Intent(Intent.ACTION_SEND);
+
+				intent.setType("image/png");
+				intent.putExtra(Intent.EXTRA_SUBJECT, getLastContentImageHitTestUrl());
+				intent.putExtra(Intent.EXTRA_TEXT, getLastContentImageHitTestUrl());
+
+				startActivity(Intent.createChooser(intent, getLastContentImageHitTestUrl()));
+			}
+			return true;
 		case R.id.article_link_share:
 			if (ap != null && ap.getSelectedArticle() != null) {
 				shareArticle(ap.getSelectedArticle());
@@ -570,6 +598,10 @@ public class OnlineActivity extends CommonActivity {
 		switch (item.getItemId()) {
 		case android.R.id.home:
 			finish();
+			return true;
+		case R.id.subscribe_to_feed:
+			Intent subscribe = new Intent(OnlineActivity.this, SubscribeActivity.class);
+			startActivityForResult(subscribe, 0);
 			return true;
 		case R.id.toggle_attachments:
 			if (true) {
@@ -714,6 +746,67 @@ public class OnlineActivity extends CommonActivity {
 					}
 				};
 				req.execute(map);
+			}
+			return true;
+		case R.id.headlines_view_mode:
+			if (hf != null) {
+				Dialog dialog = new Dialog(this);
+				
+				String viewMode = getViewMode();
+				
+				//Log.d(TAG, "viewMode:" + getViewMode());
+
+				int selectedIndex = 0;
+				
+				if (viewMode.equals("all_articles")) {
+					selectedIndex = 1;
+				} else if (viewMode.equals("marked")) {
+					selectedIndex = 2;
+				} else if (viewMode.equals("published")) {
+					selectedIndex = 3;
+				} else if (viewMode.equals("unread")) {
+					selectedIndex = 4;
+				}
+				
+				AlertDialog.Builder builder = new AlertDialog.Builder(this)
+						.setTitle(R.string.headlines_set_view_mode)
+						.setSingleChoiceItems(
+								new String[] {
+										getString(R.string.headlines_adaptive),
+										getString(R.string.headlines_all_articles),
+										getString(R.string.headlines_starred),
+										getString(R.string.headlines_published),
+										getString(R.string.headlines_unread) },
+								selectedIndex, new DialogInterface.OnClickListener() {
+									@Override
+									public void onClick(DialogInterface dialog,
+											int which) {
+										switch (which) {
+										case 0:
+											setViewMode("adaptive");
+											break;
+										case 1:
+											setViewMode("all_articles");
+											break;
+										case 2:
+											setViewMode("marked");
+											break;
+										case 3:
+											setViewMode("published");
+											break;
+										case 4:
+											setViewMode("unread");
+											break;
+										}
+										dialog.cancel();
+
+										refresh();
+									}
+								});
+
+				dialog = builder.create();
+				dialog.show();
+
 			}
 			return true;
 		case R.id.headlines_select:
@@ -1210,7 +1303,22 @@ public class OnlineActivity extends CommonActivity {
 		
 		return super.onKeyDown(keyCode, event);			
 	}
+	
+	// Handle onKeyUp too to suppress beep
+	@Override
+	public boolean onKeyUp(int keyCode, KeyEvent event) {
+		if (m_prefs.getBoolean("use_volume_keys", false)) {
+					
+			switch (keyCode) {
+			case KeyEvent.KEYCODE_VOLUME_UP:
+			case KeyEvent.KEYCODE_VOLUME_DOWN:
+				return true;
+			}
+		}
 		
+		return super.onKeyUp(keyCode, event);		
+	}
+	
 	@SuppressWarnings("unchecked")
 	public void catchupFeed(final Feed feed) {
 		Log.d(TAG, "catchupFeed=" + feed);
@@ -1308,6 +1416,7 @@ public class OnlineActivity extends CommonActivity {
 			
 			m_menu.findItem(R.id.set_labels).setEnabled(getApiLevel() >= 1);
 			m_menu.findItem(R.id.article_set_note).setEnabled(getApiLevel() >= 1);
+			m_menu.findItem(R.id.subscribe_to_feed).setEnabled(getApiLevel() >= 5);
 			
 			MenuItem search = m_menu.findItem(R.id.search);
 			search.setEnabled(getApiLevel() >= 2);
@@ -1489,5 +1598,23 @@ public class OnlineActivity extends CommonActivity {
 			loginFailure();
 		}
 
+	}
+
+	public void setViewMode(String viewMode) {
+		SharedPreferences.Editor editor = m_prefs.edit();
+		editor.putString("view_mode", viewMode);
+		editor.commit();
+	}
+	
+	public String getViewMode() {		
+		return m_prefs.getString("view_mode", "adaptive");
+	}
+	
+	public void setLastContentImageHitTestUrl(String url) {
+		m_lastImageHitTestUrl = url;		
+	}
+	
+	public String getLastContentImageHitTestUrl() {
+		return m_lastImageHitTestUrl;
 	}
 }

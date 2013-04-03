@@ -3,7 +3,7 @@
     android:id="@+id/headlines_row"
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"
-    android:background="?headlineUnreadBackground"
+    android:background="?headlineSelectedBackgroundSolid"
     android:gravity="center_vertical"
     android:orientation="vertical" >
 
@@ -23,7 +23,7 @@
                 android:ellipsize="end"
                 android:singleLine="false"
                 android:text="There are many variations of passages of Lorem Ipsum available"
-                android:textColor="?headlineUnreadTextColor"
+                android:textColor="?headlineSelectedTextColor"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
@@ -63,7 +63,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Neque porro quisquam est qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit..."
-                android:textColor="?headlineExcerptTextColor"
+                android:textColor="?headlineSelectedExcerptTextColor"
                 android:textSize="13sp" />
 
 
@@ -91,7 +91,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Jan 01, 00:00"
-                    android:textColor="?headlineExcerptTextColor"
+                    android:textColor="?headlineSelectedExcerptTextColor"
                     android:textSize="10sp"
                     android:textStyle="italic" />
 

@@ -180,16 +180,18 @@ public class OfflineHeadlinesFragment extends Fragment implements OnItemClickLis
 				
 				SQLiteStatement stmt = null;
 				
+				String updatedOperator = (m_prefs.getBoolean("offline_oldest_first", false)) ? "<" : ">";
+				
 				if (m_feedIsCat) {
 					stmt = m_activity.getWritableDb().compileStatement(
 							"UPDATE articles SET modified = 1, unread = 0 WHERE " +
-							"updated >= (SELECT updated FROM articles WHERE " + BaseColumns._ID + " = ?) " +
-							"AND feed_id IN (SELECT "+BaseColumns._ID+" FROM feeds WHERE cat_id = ?)");						
+							"updated "+updatedOperator+" (SELECT updated FROM articles WHERE " + BaseColumns._ID + " = ?) " +
+							"AND unread = 1 AND feed_id IN (SELECT "+BaseColumns._ID+" FROM feeds WHERE cat_id = ?)");						
 				} else {
 					stmt = m_activity.getWritableDb().compileStatement(
 							"UPDATE articles SET modified = 1, unread = 0 WHERE " +
-							"updated >= (SELECT updated FROM articles WHERE " + BaseColumns._ID + " = ?) " +
-							"AND feed_id = ?");						
+							"updated "+updatedOperator+" (SELECT updated FROM articles WHERE " + BaseColumns._ID + " = ?) " +
+							"AND unread = 1 AND feed_id = ?");						
 				}
 				
 				stmt.bindLong(1, articleId);
@@ -378,7 +380,8 @@ public class OfflineHeadlinesFragment extends Fragment implements OnItemClickLis
 		public static final int VIEW_NORMAL = 0;
 		public static final int VIEW_UNREAD = 1;
 		public static final int VIEW_SELECTED = 2;
-		public static final int VIEW_LOADMORE = 3;
+		public static final int VIEW_SELECTED_UNREAD = 3;
+		public static final int VIEW_LOADMORE = 4;
 		
 		public static final int VIEW_COUNT = VIEW_LOADMORE+1;
 		
@@ -393,7 +396,9 @@ public class OfflineHeadlinesFragment extends Fragment implements OnItemClickLis
 			
 			//Log.d(TAG, "@gIVT " + position + " " + c.getInt(0) + " vs " + m_activeArticleId);
 			
-			if (c.getInt(0) == m_activeArticleId) {
+			if (c.getInt(0) == m_activeArticleId && c.getInt(c.getColumnIndex("unread")) == 1) {				
+				return VIEW_SELECTED_UNREAD;
+			} else if (c.getInt(0) == m_activeArticleId) {
 				return VIEW_SELECTED;
 			} else if (c.getInt(c.getColumnIndex("unread")) == 1) {
 				return VIEW_UNREAD;
@@ -419,6 +424,9 @@ public class OfflineHeadlinesFragment extends Fragment implements OnItemClickLis
 					break;
 				case VIEW_UNREAD:
 					layoutId = R.layout.headlines_row_unread;
+					break;
+				case VIEW_SELECTED_UNREAD:
+					layoutId = R.layout.headlines_row_selected_unread;
 					break;
 				case VIEW_SELECTED:
 					layoutId = R.layout.headlines_row_selected;

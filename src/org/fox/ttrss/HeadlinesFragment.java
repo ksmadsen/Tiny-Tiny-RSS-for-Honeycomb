@@ -205,10 +205,13 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 					ArticleList articles = getAllArticles();
 					ArticleList tmp = new ArticleList();
 					for (Article a : articles) {
-						a.unread = false;
-						tmp.add(a);
-						if (article.id == a.id)
-							break;
+						if (a.unread) {
+							if (article.id == a.id)
+								break;
+
+							a.unread = false;
+							tmp.add(a);
+						}
 					}
 					if (tmp.size() > 0) {
 						m_activity.toggleArticlesUnread(tmp);
@@ -344,7 +347,6 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 
 			final boolean fappend = append;
 			final String sessionId = m_activity.getSessionId();
-			final boolean showUnread = m_activity.getUnreadArticlesOnly();
 			final boolean isCat = m_feed.is_cat;
 			
 			HeadlinesRequest req = new HeadlinesRequest(getActivity().getApplicationContext(), m_activity) {
@@ -410,11 +412,12 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 					put("feed_id", String.valueOf(m_feed.id));
 					put("show_content", "true");
 					put("include_attachments", "true");
+					put("view_mode", m_activity.getViewMode());
 					put("limit", String.valueOf(HEADLINES_REQUEST_SIZE));
 					put("offset", String.valueOf(0));
-					put("view_mode", showUnread ? "adaptive" : "all_articles");
 					put("skip", String.valueOf(fskip));
 					put("include_nested", "true");
+					put("order_by", m_prefs.getBoolean("oldest_first", false) ? "date_reverse" : "");
 					
 					if (isCat) put("is_cat", "true");
 					
@@ -525,7 +528,8 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 		public static final int VIEW_NORMAL = 0;
 		public static final int VIEW_UNREAD = 1;
 		public static final int VIEW_SELECTED = 2;
-		public static final int VIEW_LOADMORE = 3;
+		public static final int VIEW_SELECTED_UNREAD = 3;
+		public static final int VIEW_LOADMORE = 4;
 		
 		public static final int VIEW_COUNT = VIEW_LOADMORE+1;
 		
@@ -544,6 +548,8 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 			
 			if (a.id == -1) {
 				return VIEW_LOADMORE;
+			} else if (m_activeArticle != null && a.id == m_activeArticle.id && a.unread) {
+				return VIEW_SELECTED_UNREAD;
 			} else if (m_activeArticle != null && a.id == m_activeArticle.id) {
 				return VIEW_SELECTED;
 			} else if (a.unread) {
@@ -572,6 +578,9 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 					break;
 				case VIEW_SELECTED:
 					layoutId = R.layout.headlines_row_selected;
+					break;
+				case VIEW_SELECTED_UNREAD:
+					layoutId = R.layout.headlines_row_selected_unread;
 					break;
 				}
 				
@@ -644,14 +653,26 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 			String articleContent = article.content != null ? article.content : "";
 
 			if (te != null) {
-				String excerpt = Jsoup.parse(articleContent).text(); 
-				
-				if (excerpt.length() > 200)
-					excerpt = excerpt.substring(0, 200) + "...";
-				
-				te.setText(excerpt);
+				if (!m_prefs.getBoolean("headlines_show_content", true)) {
+					te.setVisibility(View.GONE);
+				} else {
+					String excerpt = Jsoup.parse(articleContent).text(); 
+					
+					if (excerpt.length() > 200)
+						excerpt = excerpt.substring(0, 200) + "...";
+					
+					te.setText(excerpt);
+				}
 			}       	
-
+			
+			String articleAuthor = article.author != null ? article.author : "";
+			
+			TextView author = (TextView)v.findViewById(R.id.author);
+			
+			if (author != null) {
+				author.setText(articleAuthor);
+			}
+			
 			/* ImageView separator = (ImageView)v.findViewById(R.id.headlines_separator);
 			
 			if (separator != null && m_onlineServices.isSmallScreen()) {

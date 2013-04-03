@@ -258,6 +258,14 @@ public class FeedCategoriesFragment extends Fragment implements OnItemClickListe
 			
 			m_activity.setProgressBarVisibility(false);
 
+			if (getView() != null) {
+				ListView list = (ListView)getView().findViewById(R.id.feeds);
+			
+				if (list != null) {
+					list.setEmptyView(getView().findViewById(R.id.no_feeds));
+				}
+			}
+			
 			if (result != null) {
 				try {			
 					JsonArray content = result.getAsJsonArray();
@@ -285,6 +293,7 @@ public class FeedCategoriesFragment extends Fragment implements OnItemClickListe
 							setLoadingStatus(R.string.no_feeds_to_display, false);
 						else */
 						
+						//m_adapter.notifyDataSetChanged(); (done by sortCats)
 						m_activity.setLoadingStatus(R.string.blank, false);
 						
 						return;
@@ -319,7 +328,7 @@ public class FeedCategoriesFragment extends Fragment implements OnItemClickListe
 		
 		Collections.sort(m_cats, cmp);
 		try {
-			m_adapter.notifyDataSetInvalidated();
+			m_adapter.notifyDataSetChanged();
 		} catch (NullPointerException e) {
 			// adapter missing
 		}
@@ -412,13 +421,17 @@ public class FeedCategoriesFragment extends Fragment implements OnItemClickListe
 		if (list != null) {
 			FeedCategory cat = (FeedCategory)list.getItemAtPosition(position);
 			
-			if ("ARTICLES".equals(m_prefs.getString("default_view_mode", "HEADLINES")) &&
-					m_prefs.getBoolean("browse_cats_like_feeds", false)) {
-				
-				m_activity.openFeedArticles(new Feed(cat.id, cat.title, true));
-				
-			} else {			
-				m_activity.onCatSelected(cat);
+			if (cat.id < 0) {
+				m_activity.onCatSelected(cat, false);				
+			} else {
+				if ("ARTICLES".equals(m_prefs.getString("default_view_mode", "HEADLINES")) &&
+						m_prefs.getBoolean("browse_cats_like_feeds", false)) {
+					
+					m_activity.openFeedArticles(new Feed(cat.id, cat.title, true));
+					
+				} else {			
+					m_activity.onCatSelected(cat);
+				}
 			}
 			
 			if (!m_activity.isSmallScreen())

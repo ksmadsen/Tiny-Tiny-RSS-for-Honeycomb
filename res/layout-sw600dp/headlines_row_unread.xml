@@ -29,7 +29,8 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:orientation="vertical" >
-
+
+
             <TextView
                 android:id="@+id/title"
                 android:layout_width="match_parent"
@@ -42,6 +43,36 @@
                 android:textStyle="bold" >
 
             </TextView>
+            
+            <LinearLayout
+                android:id="@+id/feed_and_author"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" >
+
+                <TextView
+                    android:id="@+id/feed_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:ellipsize="end"
+                    android:layout_weight="0.5"
+                    android:singleLine="true"
+                    android:text="{Feed title...}"
+                    android:textColor="?headlineExcerptTextColor"
+                    android:textSize="10sp" />
+
+                <TextView
+                    android:id="@+id/author"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_weight="0.5"
+                    android:ellipsize="end"
+                    android:gravity="right"
+                    android:singleLine="true"
+                    android:text="{Author}"
+                    android:textColor="?headlineExcerptTextColor"
+                    android:textSize="10sp" />
+
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/excerpt"
@@ -51,7 +82,9 @@
                 android:textColor="?headlineExcerptTextColor"
                 android:textSize="13sp" >
             </TextView>
-
+
+
+
             <TextView
                 android:id="@+id/date"
                 android:layout_width="wrap_content"
