@@ -3,6 +3,8 @@ package org.fox.ttrss.offline;
 import org.fox.ttrss.GlobalState;
 import org.fox.ttrss.R;
 
+import com.actionbarsherlock.view.MenuItem;
+
 import android.animation.LayoutTransition;
 import android.annotation.SuppressLint;
 import android.content.Intent;
@@ -14,7 +16,6 @@ import android.provider.BaseColumns;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
 import android.util.Log;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
@@ -30,11 +31,7 @@ public class OfflineFeedsActivity extends OfflineActivity implements OfflineHead
 		m_prefs = PreferenceManager
 				.getDefaultSharedPreferences(getApplicationContext());
 
-		if (m_prefs.getString("theme", "THEME_DARK").equals("THEME_DARK")) {
-			setTheme(R.style.DarkTheme);
-		} else {
-			setTheme(R.style.LightTheme);
-		}
+		setAppTheme(m_prefs);
 		
 		super.onCreate(savedInstanceState);
 		
@@ -49,7 +46,7 @@ public class OfflineFeedsActivity extends OfflineActivity implements OfflineHead
 			m_actionbarUpEnabled = savedInstanceState.getBoolean("actionbarUpEnabled");
 			
 			if (!isCompatMode() && m_actionbarUpEnabled) {
-				getActionBar().setDisplayHomeAsUpEnabled(true);
+				getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 			}
 			
 		} else {
@@ -59,7 +56,7 @@ public class OfflineFeedsActivity extends OfflineActivity implements OfflineHead
 					intent.getIntExtra("article", -10000) != -10000) {
 				
 				if (!isCompatMode()) {
-					getActionBar().setDisplayHomeAsUpEnabled(true);
+					getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 					m_actionbarUpEnabled = true;
 				}
 				
@@ -71,14 +68,20 @@ public class OfflineFeedsActivity extends OfflineActivity implements OfflineHead
 				boolean isCat = intent.getBooleanExtra("isCat", false);
 				
 				if (articleId != -10000) {
-					ft.replace(R.id.feeds_fragment, new OfflineArticlePager(articleId, feedId, isCat), FRAG_ARTICLE);
+					OfflineArticlePager oap = new OfflineArticlePager();
+					oap.initialize(articleId, feedId, isCat);
+					ft.replace(R.id.feeds_fragment, oap, FRAG_ARTICLE);
 				} else {
 					if (feedId != -10000) {
-						ft.replace(R.id.feeds_fragment, new OfflineHeadlinesFragment(feedId, isCat), FRAG_HEADLINES);
+						OfflineHeadlinesFragment ohf = new OfflineHeadlinesFragment();
+						ohf.initialize(feedId, isCat);
+						ft.replace(R.id.feeds_fragment, ohf, FRAG_HEADLINES);
 					}
 
 					if (catId != -10000) {
-						ft.replace(R.id.feeds_fragment, new OfflineFeedsFragment(catId), FRAG_FEEDS);
+						OfflineFeedsFragment off = new OfflineFeedsFragment();
+						off.initialize(catId);
+						ft.replace(R.id.feeds_fragment, off, FRAG_FEEDS);
 					}
 				}
 				
@@ -159,8 +162,9 @@ public class OfflineFeedsActivity extends OfflineActivity implements OfflineHead
 			
 			m_menu.setGroupVisible(R.id.menu_group_article, af != null && af.isAdded());
 
-			m_menu.setGroupVisible(R.id.menu_group_headlines, hf != null && hf.isAdded() && getSelectedArticleCount() == 0);
-			m_menu.setGroupVisible(R.id.menu_group_headlines_selection, hf != null && hf.isAdded() && getSelectedArticleCount() != 0);
+			m_menu.setGroupVisible(R.id.menu_group_headlines, hf != null && hf.isAdded());
+			//m_menu.setGroupVisible(R.id.menu_group_headlines, hf != null && hf.isAdded() && getSelectedArticleCount() == 0);
+			//m_menu.setGroupVisible(R.id.menu_group_headlines_selection, hf != null && hf.isAdded() && getSelectedArticleCount() != 0);
 			
 			MenuItem item = m_menu.findItem(R.id.show_feeds);
 
@@ -189,7 +193,8 @@ public class OfflineFeedsActivity extends OfflineActivity implements OfflineHead
 				FragmentTransaction ft = getSupportFragmentManager()
 						.beginTransaction();
 
-				OfflineFeedsFragment ff = new OfflineFeedsFragment(catId);
+				OfflineFeedsFragment ff = new OfflineFeedsFragment();
+				ff.initialize(catId);
 
 				ft.replace(R.id.feeds_fragment, ff, FRAG_FEEDS);
 				ft.addToBackStack(null);
@@ -236,7 +241,8 @@ public class OfflineFeedsActivity extends OfflineActivity implements OfflineHead
 						FragmentTransaction ft = getSupportFragmentManager()
 								.beginTransaction();
 						
-						OfflineHeadlinesFragment hf = new OfflineHeadlinesFragment(feedId, isCat);
+						OfflineHeadlinesFragment hf = new OfflineHeadlinesFragment();
+						hf.initialize(feedId, isCat);
 						ft.replace(R.id.headlines_fragment, hf, FRAG_HEADLINES);
 						
 						ft.commit();
@@ -275,6 +281,8 @@ public class OfflineFeedsActivity extends OfflineActivity implements OfflineHead
 		stmt.bindLong(1, articleId);
 		stmt.execute();
 		stmt.close();
+		
+		initMenu();
 		
 		if (open) {
 			if (isSmallScreen()) {

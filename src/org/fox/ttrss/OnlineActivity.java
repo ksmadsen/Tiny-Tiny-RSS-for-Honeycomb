@@ -32,11 +32,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.util.Log;
-import android.view.ActionMode;
 import android.view.KeyEvent;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
 import android.webkit.WebView;
@@ -44,11 +40,22 @@ import android.webkit.WebView.HitTestResult;
 import android.widget.EditText;
 import android.widget.SearchView;
 import android.widget.ShareActionProvider;
+import android.widget.TextView;
 
+import com.actionbarsherlock.view.ActionMode;
+import com.actionbarsherlock.view.Menu;
+import com.actionbarsherlock.view.MenuInflater;
+import com.actionbarsherlock.view.MenuItem;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+
 
 public class OnlineActivity extends CommonActivity {
 	private final String TAG = this.getClass().getSimpleName();
@@ -85,8 +92,7 @@ public class OnlineActivity extends CommonActivity {
 	
 	@TargetApi(11)
 	private class HeadlinesActionModeCallback implements ActionMode.Callback {
-        MenuItem marked;
-		
+
 		@Override
 		public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
 			return false;
@@ -94,8 +100,10 @@ public class OnlineActivity extends CommonActivity {
 		
 		@Override
 		public void onDestroyActionMode(ActionMode mode) {
-			HeadlinesFragment hf = (HeadlinesFragment) getSupportFragmentManager().findFragmentByTag(FRAG_HEADLINES);
+			m_headlinesActionMode = null;
 
+			HeadlinesFragment hf = (HeadlinesFragment) getSupportFragmentManager().findFragmentByTag(FRAG_HEADLINES);
+			
 			if (hf != null) {
 				ArticleList selected = hf.getSelectedArticles();
 				if (selected.size() > 0) {
@@ -104,21 +112,14 @@ public class OnlineActivity extends CommonActivity {
 					hf.notifyUpdated();
 				}
 			}
-
-			m_headlinesActionMode = null;
 		}
 		
 		@Override
 		public boolean onCreateActionMode(ActionMode mode, Menu menu) {
-            Log.d(TAG, "onCreateActionMode");
-			 MenuInflater inflater = getMenuInflater();
-	            inflater.inflate(R.menu.headlines_action_menu, menu);
 
-            marked = menu.findItem(R.id.selection_toggle_marked);
-            if (marked != null) {
-                Log.d(TAG, "Marked is now set");
-            }
-
+			MenuInflater inflater = getSupportMenuInflater();
+			inflater.inflate(R.menu.headlines_action_menu, menu);
+			
 			return true;
 		}
 		
@@ -127,10 +128,6 @@ public class OnlineActivity extends CommonActivity {
 			onOptionsItemSelected(item);
 			return false;
 		}
-
-        public void setMarked(boolean state) {
-            if (marked != null) marked.setChecked(state);
-        }
 	};
 	
 	protected String getSessionId() {
@@ -143,20 +140,13 @@ public class OnlineActivity extends CommonActivity {
 	
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
+		ApiRequest.disableConnectionReuseIfNecessary();
+		
+		// we use that before parent onCreate so let's init locally
 		m_prefs = PreferenceManager
 				.getDefaultSharedPreferences(getApplicationContext());
 
-		ApiRequest.disableConnectionReuseIfNecessary();
-		
-		if (m_prefs.getString("theme", "THEME_DARK").equals("THEME_DARK")) {
-			setTheme(R.style.DarkTheme);
-		} else if (m_prefs.getString("theme", "THEME_DARK").equals("THEME_SEPIA")) {
-			setTheme(R.style.SepiaTheme);
-		} else if (m_prefs.getString("theme", "THEME_DARK").equals("THEME_DARK_GRAY")) {
-			setTheme(R.style.DarkGrayTheme);
-		} else {
-			setTheme(R.style.LightTheme);
-		}
+		setAppTheme(m_prefs);
 
 		super.onCreate(savedInstanceState);
 
@@ -183,7 +173,7 @@ public class OnlineActivity extends CommonActivity {
 			switchOfflineSuccess();			
 		} else {
 			//checkTrial(false);
-			
+
 			/* if (getIntent().getExtras() != null) {
 				Intent i = getIntent();
 			} */
@@ -192,9 +182,7 @@ public class OnlineActivity extends CommonActivity {
 				m_offlineModeStatus = savedInstanceState.getInt("offlineModeStatus");
 			}
 			
-			if (!isCompatMode()) {
-				m_headlinesActionModeCallback = new HeadlinesActionModeCallback();
-			}
+			m_headlinesActionModeCallback = new HeadlinesActionModeCallback();
 		}
 	}
 	
@@ -543,7 +531,7 @@ public class OnlineActivity extends CommonActivity {
 	}
 	
 	@Override
-	public boolean onContextItemSelected(MenuItem item) {
+	public boolean onContextItemSelected(android.view.MenuItem item) {
 		/* AdapterContextMenuInfo info = (AdapterContextMenuInfo) item
 				.getMenuInfo(); */
 		
@@ -573,6 +561,43 @@ public class OnlineActivity extends CommonActivity {
 				startActivity(Intent.createChooser(intent, getLastContentImageHitTestUrl()));
 			}
 			return true;
+		case R.id.article_img_view_caption:
+			if (getLastContentImageHitTestUrl() != null) {
+
+                // Android doesn't give us an easy way to access title tags;
+                // we'll use Jsoup on the body text to grab the title text
+                // from the first image tag with this url. This will show
+                // the wrong text if an image is used multiple times.
+                Document doc = Jsoup.parse(ap.getSelectedArticle().content);
+                Elements es = doc.getElementsByAttributeValue("src", getLastContentImageHitTestUrl());
+                if (es.size() > 0){
+                    if (es.get(0).hasAttr("title")){
+                        Dialog dia = new Dialog(this);
+                        if (es.get(0).hasAttr("alt")){
+                            dia.setTitle(es.get(0).attr("alt"));
+                        } else {
+                            dia.setTitle(es.get(0).attr("title"));
+                        }
+                        TextView titleText = new TextView(this);
+                        
+                        if (android.os.Build.VERSION.SDK_INT >= 16) {
+                        	titleText.setPaddingRelative(24, 24, 24, 24);
+                        } else {
+                        	titleText.setPadding(24, 24, 24, 24);
+                        }
+                        
+                        titleText.setTextSize(16);
+                        titleText.setText(es.get(0).attr("title"));
+                        dia.setContentView(titleText);
+                        dia.show();
+                    } else {
+                        toast(R.string.no_caption_to_display);
+                    }
+                } else {
+                    toast(R.string.no_caption_to_display);
+                }
+            }
+            return true;
 		case R.id.article_link_share:
 			if (ap != null && ap.getSelectedArticle() != null) {
 				shareArticle(ap.getSelectedArticle());
@@ -621,6 +646,7 @@ public class OnlineActivity extends CommonActivity {
 					Dialog dialog = new Dialog(OnlineActivity.this);
 					AlertDialog.Builder builder = new AlertDialog.Builder(OnlineActivity.this)
 							.setTitle(R.string.attachments_prompt)
+							.setCancelable(true)
 							.setSingleChoiceItems(items, 0, new OnClickListener() {
 								@Override
 								public void onClick(DialogInterface dialog, int which) {
@@ -844,23 +870,21 @@ public class OnlineActivity extends CommonActivity {
 			}
 			return true;
 		case R.id.share_article:
-			if (android.os.Build.VERSION.SDK_INT < 14) {
+			//if (android.os.Build.VERSION.SDK_INT < 14) {
 				if (ap != null) {
 					shareArticle(ap.getSelectedArticle());
 				}
-			}
+			//}
 			return true;
 		case R.id.toggle_marked:
 			if (ap != null & ap.getSelectedArticle() != null) {
 				Article a = ap.getSelectedArticle();
 				a.marked = !a.marked;
-                Log.d(TAG, "Marked called by " + toString() + " new state: " + a.marked);
 				saveArticleMarked(a);
 				if (hf != null) hf.notifyUpdated();
-                if (m_headlinesActionModeCallback != null) m_headlinesActionModeCallback.setMarked(a.marked);
 			}
 			return true;
-		case R.id.selection_select_none:
+		/* case R.id.selection_select_none:
 			if (hf != null) {
 				ArticleList selected = hf.getSelectedArticles();
 				if (selected.size() > 0) {
@@ -869,7 +893,7 @@ public class OnlineActivity extends CommonActivity {
 					hf.notifyUpdated();
 				}
 			}
-			return true;
+			return true; */
 		case R.id.selection_toggle_unread:
 			if (hf != null) {
 				ArticleList selected = hf.getSelectedArticles();
@@ -880,6 +904,7 @@ public class OnlineActivity extends CommonActivity {
 
 					toggleArticlesUnread(selected);
 					hf.notifyUpdated();
+					initMenu();
 				}
 			}
 			return true;
@@ -893,6 +918,7 @@ public class OnlineActivity extends CommonActivity {
 
 					toggleArticlesMarked(selected);
 					hf.notifyUpdated();
+					initMenu();
 				}
 			}
 			return true;
@@ -906,6 +932,7 @@ public class OnlineActivity extends CommonActivity {
 
 					toggleArticlesPublished(selected);
 					hf.notifyUpdated();
+					initMenu();
 				}
 			}
 			return true;
@@ -933,6 +960,7 @@ public class OnlineActivity extends CommonActivity {
 					if (tmp.size() > 0) {
 						toggleArticlesUnread(tmp);
 						hf.notifyUpdated();
+						initMenu();
 					}
 				}
 			}
@@ -940,8 +968,12 @@ public class OnlineActivity extends CommonActivity {
 		case R.id.set_unread:
 			if (ap != null && ap.getSelectedArticle() != null) {
 				Article a = ap.getSelectedArticle();
-				a.unread = true;
-				saveArticleUnread(a);
+
+				if (a != null) {
+					a.unread = !a.unread;
+					saveArticleUnread(a);
+				}
+				
 				if (hf != null) hf.notifyUpdated();
 			}
 			return true;
@@ -1134,7 +1166,7 @@ public class OnlineActivity extends CommonActivity {
 	
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
-		MenuInflater inflater = getMenuInflater();
+		MenuInflater inflater = getSupportMenuInflater();
 		inflater.inflate(R.menu.main_menu, menu);
 
 		m_menu = menu;
@@ -1165,7 +1197,12 @@ public class OnlineActivity extends CommonActivity {
 	
 	@SuppressWarnings({ "unchecked", "serial" })
 	public void saveArticleUnread(final Article article) {
-		ApiRequest req = new ApiRequest(getApplicationContext());
+		ApiRequest req = new ApiRequest(getApplicationContext()) {
+			protected void onPostExecute(JsonElement result) {
+				//toast(R.string.article_set_unread);
+				initMenu();
+			}
+		};
 
 		HashMap<String, String> map = new HashMap<String, String>() {
 			{
@@ -1184,7 +1221,8 @@ public class OnlineActivity extends CommonActivity {
 	public void saveArticleMarked(final Article article) {
 		ApiRequest req = new ApiRequest(getApplicationContext()) {
 			protected void onPostExecute(JsonElement result) {
-				toast(article.marked ? R.string.notify_article_marked : R.string.notify_article_unmarked);
+				//toast(article.marked ? R.string.notify_article_marked : R.string.notify_article_unmarked);
+				initMenu();
 			}
 		};
 
@@ -1206,7 +1244,8 @@ public class OnlineActivity extends CommonActivity {
 
 		ApiRequest req = new ApiRequest(getApplicationContext()) {
 			protected void onPostExecute(JsonElement result) {
-				toast(article.published ? R.string.notify_article_published : R.string.notify_article_unpublished);
+				//toast(article.published ? R.string.notify_article_published : R.string.notify_article_unpublished);
+				initMenu();
 			}
 		};
 
@@ -1410,7 +1449,6 @@ public class OnlineActivity extends CommonActivity {
 			}
 			
 			m_menu.setGroupVisible(R.id.menu_group_headlines, false);
-			m_menu.setGroupVisible(R.id.menu_group_headlines_selection, false);
 			m_menu.setGroupVisible(R.id.menu_group_article, false);
 			m_menu.setGroupVisible(R.id.menu_group_feeds, false);
 			
@@ -1421,7 +1459,24 @@ public class OnlineActivity extends CommonActivity {
 			MenuItem search = m_menu.findItem(R.id.search);
 			search.setEnabled(getApiLevel() >= 2);
 			
-			if (android.os.Build.VERSION.SDK_INT >= 14) {			
+			ArticlePager ap = (ArticlePager) getSupportFragmentManager().findFragmentByTag(FRAG_ARTICLE);
+			
+			if (ap != null) {
+				Article article = ap.getSelectedArticle();
+				
+				if (article != null) {
+					m_menu.findItem(R.id.toggle_marked).setIcon(article.marked ? R.drawable.ic_important_light :
+						R.drawable.ic_unimportant_light);
+
+					m_menu.findItem(R.id.toggle_published).setIcon(article.published ? R.drawable.ic_menu_published_light :
+						R.drawable.ic_menu_unpublished_light);
+
+					m_menu.findItem(R.id.set_unread).setIcon(article.unread ? R.drawable.ic_unread_light :
+						R.drawable.ic_read_light);
+				}				
+			}
+			
+			/* if (android.os.Build.VERSION.SDK_INT >= 14) {			
 				ShareActionProvider shareProvider = (ShareActionProvider) m_menu.findItem(R.id.share_article).getActionProvider();
 
 				ArticlePager af = (ArticlePager) getSupportFragmentManager().findFragmentByTag(FRAG_ARTICLE);
@@ -1433,19 +1488,19 @@ public class OnlineActivity extends CommonActivity {
 						m_menu.findItem(R.id.share_article).setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
 					}
 				}
-			}
+			} */
 			
-			if (!isCompatMode()) {
-				HeadlinesFragment hf = (HeadlinesFragment) getSupportFragmentManager().findFragmentByTag(FRAG_HEADLINES);
+			HeadlinesFragment hf = (HeadlinesFragment) getSupportFragmentManager().findFragmentByTag(FRAG_HEADLINES);
 				
-				if (hf != null) {
-					if (hf.getSelectedArticles().size() > 0 && m_headlinesActionMode == null) {
-						m_headlinesActionMode = startActionMode(m_headlinesActionModeCallback);
-					} else if (hf.getSelectedArticles().size() == 0 && m_headlinesActionMode != null) { 
-						m_headlinesActionMode.finish();
-					}
+			if (hf != null) {
+				if (hf.getSelectedArticles().size() > 0 && m_headlinesActionMode == null) {
+					m_headlinesActionMode = startActionMode(m_headlinesActionModeCallback);
+				} else if (hf.getSelectedArticles().size() == 0 && m_headlinesActionMode != null) { 
+					m_headlinesActionMode.finish();
 				}
-				
+			}
+
+			if (!isCompatMode()) {
 				SearchView searchView = (SearchView) search.getActionView();
 				searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
 					private String query = "";
@@ -1617,4 +1672,5 @@ public class OnlineActivity extends CommonActivity {
 	public String getLastContentImageHitTestUrl() {
 		return m_lastImageHitTestUrl;
 	}
+
 }

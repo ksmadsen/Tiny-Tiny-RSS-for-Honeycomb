@@ -2,9 +2,13 @@ package org.fox.ttrss;
 
 import org.fox.ttrss.util.DatabaseHelper;
 
+import com.actionbarsherlock.app.SherlockFragmentActivity;
+
 import android.annotation.SuppressLint;
+import android.content.SharedPreferences;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v4.app.FragmentActivity;
 import android.util.Log;
 import android.view.Display;
@@ -12,7 +16,7 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class CommonActivity extends FragmentActivity {
+public class CommonActivity extends SherlockFragmentActivity {
 	private final String TAG = this.getClass().getSimpleName();
 	
 	public final static String FRAG_HEADLINES = "headlines";
@@ -25,28 +29,25 @@ public class CommonActivity extends FragmentActivity {
 
 	private boolean m_smallScreenMode = true;
 	private boolean m_compatMode = false;
+	private String m_theme;
+
+	protected SharedPreferences m_prefs;
 
 	protected void setSmallScreen(boolean smallScreen) {
 		Log.d(TAG, "m_smallScreenMode=" + smallScreen);
 		m_smallScreenMode = smallScreen;
 	}
 	
-	public boolean getUnreadArticlesOnly() {
-		return GlobalState.getInstance().m_unreadArticlesOnly;
-	}
-	
 	public boolean getUnreadOnly() {
-		return GlobalState.getInstance().m_unreadOnly;
+		return m_prefs.getBoolean("show_unread_only", true);
 	}
 	
 	public void setUnreadOnly(boolean unread) {
-		GlobalState.getInstance().m_unreadOnly = unread;
+		SharedPreferences.Editor editor = m_prefs.edit();
+		editor.putBoolean("show_unread_only", unread);
+		editor.commit();
 	}
 
-	public void setUnreadArticlesOnly(boolean unread) {
-		GlobalState.getInstance().m_unreadArticlesOnly = unread;
-	}
-	
 	public void setLoadingStatus(int status, boolean showProgress) {
 		TextView tv = (TextView) findViewById(R.id.loading_message);
 
@@ -85,6 +86,18 @@ public class CommonActivity extends FragmentActivity {
 	}
 
 	@Override
+	public void onResume() {
+		super.onResume();
+	
+		if (!m_theme.equals(m_prefs.getString("theme", "THEME_DARK"))) {
+			Log.d(TAG, "theme changed, restarting");
+			
+			finish();
+			startActivity(getIntent());
+		}
+	}
+
+	@Override
 	public void onDestroy() {
 		super.onDestroy();
 
@@ -94,6 +107,15 @@ public class CommonActivity extends FragmentActivity {
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
+		m_prefs = PreferenceManager
+				.getDefaultSharedPreferences(getApplicationContext());
+		
+		if (savedInstanceState != null) {
+			m_theme = savedInstanceState.getString("theme");
+		} else {		
+			m_theme = m_prefs.getString("theme", "THEME_DARK");
+		}
+		
 		initDatabase();
 		
 		m_compatMode = android.os.Build.VERSION.SDK_INT <= 10;
@@ -101,6 +123,13 @@ public class CommonActivity extends FragmentActivity {
 		Log.d(TAG, "m_compatMode=" + m_compatMode);
 		
 		super.onCreate(savedInstanceState);
+	}
+	
+	@Override
+	public void onSaveInstanceState(Bundle out) {
+		super.onSaveInstanceState(out);
+		
+		out.putString("theme", m_theme);
 	}
 	
 	public boolean isSmallScreen() {
@@ -136,4 +165,17 @@ public class CommonActivity extends FragmentActivity {
 		toast.show();
 	}
 
+	protected void setAppTheme(SharedPreferences prefs) {
+		String defaultTheme = "THEME_DARK";
+		
+		if (prefs.getString("theme", defaultTheme).equals("THEME_DARK")) {
+			setTheme(R.style.DarkTheme);
+		} else if (prefs.getString("theme", defaultTheme).equals("THEME_SEPIA")) {
+			setTheme(R.style.SepiaTheme);
+		} else if (prefs.getString("theme", defaultTheme).equals("THEME_DARK_GRAY")) {
+			setTheme(R.style.DarkGrayTheme);
+		} else {
+			setTheme(R.style.LightTheme);
+		}
+	}
 }

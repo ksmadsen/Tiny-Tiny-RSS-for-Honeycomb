@@ -8,6 +8,7 @@ import org.fox.ttrss.types.Feed;
 import org.fox.ttrss.types.FeedCategory;
 import org.fox.ttrss.util.AppRater;
 
+import com.actionbarsherlock.view.MenuItem;
 import android.view.ViewGroup;
 import android.animation.LayoutTransition;
 import android.animation.ObjectAnimator;
@@ -20,7 +21,6 @@ import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
 import android.util.Log;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.LinearLayout;
 
@@ -34,19 +34,13 @@ public class FeedsActivity extends OnlineActivity implements HeadlinesEventListe
 	
 	private boolean m_actionbarUpEnabled = false;
 
-    private MenuItem marked_item;
-	
 	@SuppressLint("NewApi")
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		m_prefs = PreferenceManager
 				.getDefaultSharedPreferences(getApplicationContext());
 
-		if (m_prefs.getString("theme", "THEME_DARK").equals("THEME_DARK")) {
-			setTheme(R.style.DarkTheme);
-		} else {
-			setTheme(R.style.LightTheme);
-		}
+		setAppTheme(m_prefs);
 
 		super.onCreate(savedInstanceState);
 
@@ -64,7 +58,7 @@ public class FeedsActivity extends OnlineActivity implements HeadlinesEventListe
 				intent.getParcelableExtra("article") != null) {
 			
 				if (!isCompatMode()) {
-					getActionBar().setDisplayHomeAsUpEnabled(true);
+					getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 					m_actionbarUpEnabled = true;
 				}
 				
@@ -77,7 +71,9 @@ public class FeedsActivity extends OnlineActivity implements HeadlinesEventListe
 				if (article != null) {
 					Article original = GlobalState.getInstance().m_loadedArticles.findById(article.id);
 					
-					ArticlePager ap = new ArticlePager(original != null ? original : article, feed);
+					ArticlePager ap = new ArticlePager();
+					ap.initialize(original != null ? original : article, feed);
+					
 					ft.replace(R.id.feeds_fragment, ap, FRAG_ARTICLE);
 					
 					ap.setSearchQuery(intent.getStringExtra("searchQuery"));
@@ -85,14 +81,16 @@ public class FeedsActivity extends OnlineActivity implements HeadlinesEventListe
 					setTitle(feed.title);
 				} else {
 					if (feed != null) {
-						HeadlinesFragment hf = new HeadlinesFragment(feed);
+						HeadlinesFragment hf = new HeadlinesFragment();
+						hf.initialize(feed);
 						ft.replace(R.id.feeds_fragment, hf, FRAG_HEADLINES);
 						
 						setTitle(feed.title);
 					}
 					
 					if (cat != null) {
-						FeedsFragment ff = new FeedsFragment(cat);
+						FeedsFragment ff = new FeedsFragment();
+						ff.initialize(cat);
 						ft.replace(R.id.feeds_fragment, ff, FRAG_FEEDS);
 						
 						setTitle(cat.title);
@@ -129,7 +127,7 @@ public class FeedsActivity extends OnlineActivity implements HeadlinesEventListe
 			}
 
 			if (!isCompatMode() && m_actionbarUpEnabled) {
-				getActionBar().setDisplayHomeAsUpEnabled(true);
+				getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 			}
 		}
 		
@@ -154,9 +152,8 @@ public class FeedsActivity extends OnlineActivity implements HeadlinesEventListe
 			
 			m_menu.setGroupVisible(R.id.menu_group_article, af != null && af.isAdded());
 
-			m_menu.setGroupVisible(R.id.menu_group_headlines, hf != null && hf.isAdded() && hf.getSelectedArticles().size() == 0);
-			m_menu.setGroupVisible(R.id.menu_group_headlines_selection, hf != null && hf.isAdded() && hf.getSelectedArticles().size() != 0);
-			
+			m_menu.setGroupVisible(R.id.menu_group_headlines, hf != null && hf.isAdded());
+						
 			if (isSmallScreen()) {
 				m_menu.findItem(R.id.update_headlines).setVisible(hf != null && hf.isAdded());
 			} else {
@@ -174,13 +171,7 @@ public class FeedsActivity extends OnlineActivity implements HeadlinesEventListe
 						m_menu.findItem(R.id.toggle_attachments).setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
 					}
 					m_menu.findItem(R.id.toggle_attachments).setVisible(false);
-                }
-
-                if (af.getSelectedArticle() != null) {
-                    marked_item = m_menu.findItem(R.id.toggle_marked);
-                    marked_item.setChecked(af.getSelectedArticle().marked);
-                    marked_item.setIcon(af.getSelectedArticle().marked ? R.drawable.ic_menu_marked_checked : R.drawable.ic_menu_marked_unchecked);
-                }
+				}
 			}
 			
 			MenuItem item = m_menu.findItem(R.id.show_feeds);
@@ -226,7 +217,8 @@ public class FeedsActivity extends OnlineActivity implements HeadlinesEventListe
 					FragmentTransaction ft = getSupportFragmentManager()
 							.beginTransaction();
 
-					HeadlinesFragment hf = new HeadlinesFragment(fFeed);
+					HeadlinesFragment hf = new HeadlinesFragment();
+					hf.initialize(fFeed);
 					ft.replace(R.id.headlines_fragment, hf, FRAG_HEADLINES);
 					
 					ft.commit();
@@ -258,7 +250,8 @@ public class FeedsActivity extends OnlineActivity implements HeadlinesEventListe
 				FragmentTransaction ft = getSupportFragmentManager()
 						.beginTransaction();
 
-				FeedsFragment ff = new FeedsFragment(cat);
+				FeedsFragment ff = new FeedsFragment();
+				ff.initialize(cat);
 				ft.replace(R.id.feeds_fragment, ff, FRAG_FEEDS);
 
 				ft.addToBackStack(null);
@@ -315,18 +308,7 @@ public class FeedsActivity extends OnlineActivity implements HeadlinesEventListe
 		initMenu();
 	}
 
-    @Override
-    public void saveArticleMarked(Article article) {
-        Log.d(TAG, "saveARticleMarked");
-        if (marked_item != null) {
-            Log.d(TAG, "Setting marked");
-            marked_item.setChecked(article.marked);
-            marked_item.setIcon(article.marked ? R.drawable.ic_menu_marked_checked : R.drawable.ic_menu_marked_unchecked);
-        }
-        super.saveArticleMarked(article);
-    }
-
-    @Override
+	@Override
 	public void onArticleListSelectionChange(ArticleList m_selectedArticles) {
 		initMenu();		
 	}

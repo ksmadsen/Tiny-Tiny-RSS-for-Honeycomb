@@ -16,6 +16,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -47,14 +48,8 @@ public class ArticleFragment extends Fragment implements GestureDetector.OnDoubl
 	private Article m_article;
 	private OnlineActivity m_activity;
 	private GestureDetector m_detector;
-	
-	public ArticleFragment() {
-		super();
-	}
-	
-	public ArticleFragment(Article article) {
-		super();
-		
+
+	public void initialize(Article article) {
 		m_article = article;
 	}
 	
@@ -67,7 +62,7 @@ public class ArticleFragment extends Fragment implements GestureDetector.OnDoubl
 		if (v.getId() == R.id.content) {
 			HitTestResult result = ((WebView)v).getHitTestResult();
 
-			if (result.getType() == HitTestResult.IMAGE_TYPE || result.getType() == HitTestResult.SRC_IMAGE_ANCHOR_TYPE) {
+			if (result != null && (result.getType() == HitTestResult.IMAGE_TYPE || result.getType() == HitTestResult.SRC_IMAGE_ANCHOR_TYPE)) {
 				menu.setHeaderTitle(result.getExtra());
 				getActivity().getMenuInflater().inflate(R.menu.article_content_img_context_menu, menu);
 				
@@ -109,9 +104,10 @@ public class ArticleFragment extends Fragment implements GestureDetector.OnDoubl
 				String titleStr;
 				
 				if (m_article.title.length() > 200)
-					titleStr = m_article.title.substring(0, 200) + "�";
+					titleStr = m_article.title.substring(0, 200) + "...";
 				else
 					titleStr = m_article.title;
+				
 				
 				title.setText(Html.fromHtml(titleStr));
 				//title.setPaintFlags(title.getPaintFlags() | Paint.UNDERLINE_TEXT_FLAG);
@@ -277,7 +273,7 @@ public class ArticleFragment extends Fragment implements GestureDetector.OnDoubl
 					}
 				}
 				
-				content += "<p>&nbsp;</p><p>&nbsp;</p></body></html>";
+				content += "<p>&nbsp;</p><p>&nbsp;</p><p>&nbsp;</p><p>&nbsp;</p></body></html>";
 					
 				try {
 					web.loadDataWithBaseURL(null, content, "text/html", "utf-8", null);
@@ -433,7 +429,7 @@ public class ArticleFragment extends Fragment implements GestureDetector.OnDoubl
 			onRightSideTapped();
 			return true;
 		} /* else if (!m_activity.isCompatMode()) {
-			ActionBar bar = m_activity.getActionBar();
+			ActionBar bar = m_activity.getSupportActionBar();
 			
 			if (bar.isShowing()) {
 				bar.hide();

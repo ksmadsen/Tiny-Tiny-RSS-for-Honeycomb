@@ -47,7 +47,7 @@
     <string name="context_selection_toggle_marked">(Un)Star</string>
     <string name="context_selection_toggle_published">(Un)Publish</string>
     <string name="context_selection_toggle_unread">(Un)Read</string>
-    <string name="article_set_unread">Set unread</string>
+    <string name="article_set_unread">Article set unread</string>
     <string name="article_mark_read_above">Mark above read</string>
     <string name="http_login_summary">Optional. Fill this if your tt-rss installation is protected by HTTP Basic authentication</string>
     <string name="login_summary">Your tt-rss login. Not needed for single user mode</string>
@@ -56,6 +56,7 @@
     <string name="enable_cats">Enable feed categories</string>
     <string name="no_feeds_to_display">No feeds to display</string>
     <string name="no_headlines_to_display">No headlines to display</string>
+    <string name="no_caption_to_display">No caption to display</string>
     <string name="browse_cats_like_feeds">Browse categories like feeds</string>
     <string name="browse_cats_like_feeds_summary">Use category context menu to override this setting</string>
     <string name="headlines_mark_as_read">Mark read</string>
@@ -189,4 +190,9 @@
     <string name="article_img_open">Open image</string>
     <string name="article_img_share">Share image</string>
     <string name="requires_api5">Requires version 1.7.6</string>
+    <string name="labels">Labels</string>
+    <string name="article_img_view_caption">View Caption</string>
+    <string name="light_theme_is_not_supported_on_honeycomb">Light theme is not supported on Honeycomb</string>
+    <string name="pref_headlines_mark_read_scroll">Mark read on scroll</string>
+    <string name="pref_headlines_mark_read_scroll_long">Headlines will be marked read when scrolling past them</string>
 </resources>

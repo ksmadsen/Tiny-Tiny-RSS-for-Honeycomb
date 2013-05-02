@@ -62,12 +62,7 @@ public class FeedsFragment extends Fragment implements OnItemClickListener, OnSh
 	private boolean m_enableFeedIcons;
 	private boolean m_feedIconsChecked = false;
 	
-	public FeedsFragment() {
-		
-		
-	}
-	
-	public FeedsFragment(FeedCategory cat) {
+	public void initialize(FeedCategory cat) {
 		m_activeCategory = cat;
 	}
 	
@@ -547,7 +542,12 @@ public class FeedsFragment extends Fragment implements OnItemClickListener, OnSh
 			}
 		}
 		
-		Collections.sort(m_feeds, cmp);
+		try {
+			Collections.sort(m_feeds, cmp);
+		} catch (IllegalArgumentException e) {
+			// sort order got changed in prefs or something
+			e.printStackTrace();
+		}
 		
 		try {
 			m_adapter.notifyDataSetChanged();

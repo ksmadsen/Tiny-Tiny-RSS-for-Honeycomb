@@ -2,6 +2,8 @@ package org.fox.ttrss.offline;
 
 import org.fox.ttrss.R;
 
+import com.viewpagerindicator.UnderlinePageIndicator;
+
 import android.app.Activity;
 import android.content.SharedPreferences;
 import android.database.Cursor;
@@ -84,7 +86,10 @@ public class OfflineArticlePager extends Fragment {
 					getView().setSystemUiVisibility(View.STATUS_BAR_HIDDEN);
 				}
 				
-				return new OfflineArticleFragment(m_cursor.getInt(m_cursor.getColumnIndex(BaseColumns._ID)));
+				OfflineArticleFragment oaf = new OfflineArticleFragment();
+				oaf.initialize(m_cursor.getInt(m_cursor.getColumnIndex(BaseColumns._ID)));
+				
+				return oaf;
 			} 
 			
 			return null; 
@@ -109,18 +114,12 @@ public class OfflineArticlePager extends Fragment {
                     WindowManager.LayoutParams.FLAG_FULLSCREEN);
 			
 			/* if (!m_activity.isCompatMode()) {
-	            m_activity.getActionBar().hide();
+	            m_activity.getSupportActionBar().hide();
 	         } */
 		}
 	}
 	
-	public OfflineArticlePager() {
-		super();
-	}
-	
-	public OfflineArticlePager(int articleId, int feedId, boolean isCat) {
-		super();
-
+	public void initialize(int articleId, int feedId, boolean isCat) {
 		m_feedId = feedId;
 		m_isCat = isCat;
 		m_articleId = articleId;
@@ -171,8 +170,12 @@ public class OfflineArticlePager extends Fragment {
 		ViewPager pager = (ViewPager) view.findViewById(R.id.article_pager);
 		
 		pager.setAdapter(m_adapter);
+		
+		UnderlinePageIndicator indicator = (UnderlinePageIndicator)view.findViewById(R.id.article_titles);
+		indicator.setViewPager(pager);
+		
 		pager.setCurrentItem(position);
-		pager.setOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+		indicator.setOnPageChangeListener(new ViewPager.OnPageChangeListener() {
 
 			@Override
 			public void onPageScrollStateChanged(int arg0) {
@@ -186,11 +189,9 @@ public class OfflineArticlePager extends Fragment {
 			public void onPageSelected(int position) {
 				if (m_cursor.moveToPosition(position)) {
 					int articleId = m_cursor.getInt(m_cursor.getColumnIndex(BaseColumns._ID));
-
-					m_listener.onArticleSelected(articleId, false);
 					
 					m_articleId = articleId;
-					
+					m_listener.onArticleSelected(articleId, false);
 				}
 			}
 		});

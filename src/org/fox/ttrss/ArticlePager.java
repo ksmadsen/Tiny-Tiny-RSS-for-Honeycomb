@@ -24,6 +24,8 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 
 import com.google.gson.JsonElement;
+import com.viewpagerindicator.TitlePageIndicator;
+import com.viewpagerindicator.UnderlinePageIndicator;
 
 public class ArticlePager extends Fragment {
 
@@ -48,7 +50,8 @@ public class ArticlePager extends Fragment {
 			Article article = m_articles.get(position);
 			
 			if (article != null) {
-				ArticleFragment af = new ArticleFragment(article);
+				ArticleFragment af = new ArticleFragment();
+				af.initialize(article);
 
 				if (m_prefs.getBoolean("dim_status_bar", false) && getView() != null && !m_activity.isCompatMode()) {
 					getView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE);
@@ -65,14 +68,8 @@ public class ArticlePager extends Fragment {
 		}
 		
 	}
-	
-	public ArticlePager() {
-		super();
-	}
-	
-	public ArticlePager(Article article, Feed feed) {
-		super();
-				
+		
+	public void initialize(Article article, Feed feed) {
 		m_article = article;
 		m_feed = feed;
 	}
@@ -93,7 +90,7 @@ public class ArticlePager extends Fragment {
 		m_adapter = new PagerAdapter(getActivity().getSupportFragmentManager());
 		
 		ViewPager pager = (ViewPager) view.findViewById(R.id.article_pager);
-		
+				
 		int position = m_articles.indexOf(m_article);
 		
 		m_listener.onArticleSelected(m_article, false);
@@ -101,8 +98,13 @@ public class ArticlePager extends Fragment {
 		m_activity.setProgressBarVisibility(true);
 		
 		pager.setAdapter(m_adapter);
+		
+		UnderlinePageIndicator indicator = (UnderlinePageIndicator)view.findViewById(R.id.article_titles);
+		indicator.setViewPager(pager);
+
 		pager.setCurrentItem(position);
-		pager.setOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+
+		indicator.setOnPageChangeListener(new ViewPager.OnPageChangeListener() {
 
 			@Override
 			public void onPageScrollStateChanged(int arg0) {
@@ -194,7 +196,6 @@ public class ArticlePager extends Fragment {
 		final Feed feed = m_feed;
 		
 		final String sessionId = m_activity.getSessionId();
-		final boolean showUnread = m_activity.getUnreadArticlesOnly();
 		int skip = 0;
 		
 		if (append) {
@@ -275,7 +276,7 @@ public class ArticlePager extends Fragment {
                     WindowManager.LayoutParams.FLAG_FULLSCREEN);
 			
 			/* if (!m_activity.isCompatMode()) {
-	            m_activity.getActionBar().hide();
+	            m_activity.getSupportActionBar().hide();
 	        } */
 		}
 	}
@@ -316,5 +317,9 @@ public class ArticlePager extends Fragment {
 				// do nothing
 			}
 		}		
+	}
+
+	public void notifyUpdated() {
+		m_adapter.notifyDataSetChanged();
 	}
 }

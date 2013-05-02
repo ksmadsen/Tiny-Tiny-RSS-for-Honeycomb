@@ -48,15 +48,9 @@ public class OfflineArticleFragment extends Fragment implements GestureDetector.
 	private OfflineActivity m_activity;
 	private GestureDetector m_detector;
 	
-	public OfflineArticleFragment() {
-		super();
-	}
-	
-	public OfflineArticleFragment(int articleId) {
-		super();
+	public void initialize(int articleId) {
 		m_articleId = articleId;
 	}
-
 
 	@Override
 	public boolean onContextItemSelected(MenuItem item) {
@@ -249,7 +243,7 @@ public class OfflineArticleFragment extends Fragment implements GestureDetector.
 					cssOverride +
 					"</style>" +
 					"</head>" +
-					"<body>" + articleContent + "<p>&nbsp;</p><p>&nbsp;</p></body></html>";;
+					"<body>" + articleContent + "<p>&nbsp;</p><p>&nbsp;</p><p>&nbsp;</p><p>&nbsp;</p></body></html>";
 					
 				try {
 					web.loadDataWithBaseURL(null, content, "text/html", "utf-8", null);
@@ -284,7 +278,11 @@ public class OfflineArticleFragment extends Fragment implements GestureDetector.
 			TextView author = (TextView)view.findViewById(R.id.author);
 
 			if (author != null) {
-				author.setVisibility(View.GONE);
+				int authorIndex = m_cursor.getColumnIndex("author");
+				if (authorIndex >= 0)
+					author.setText(m_cursor.getString(authorIndex));
+				else
+					author.setVisibility(View.GONE);
 			}
 		} 
 		
@@ -397,7 +395,7 @@ public class OfflineArticleFragment extends Fragment implements GestureDetector.
 			onRightSideTapped();
 			return true;
 		} /* else if (!m_activity.isCompatMode()) {
-			ActionBar bar = m_activity.getActionBar();
+			ActionBar bar = m_activity.getSupportActionBar();
 			
 			if (bar.isShowing()) {
 				bar.hide();

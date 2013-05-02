@@ -16,6 +16,8 @@ import org.jsoup.Jsoup;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.res.Resources.Theme;
+import android.graphics.Paint;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
@@ -24,6 +26,7 @@ import android.support.v4.app.Fragment;
 import android.text.Html;
 import android.text.Html.ImageGetter;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.LayoutInflater;
@@ -62,6 +65,7 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 	private ArticleListAdapter m_adapter;
 	private ArticleList m_articles = GlobalState.getInstance().m_loadedArticles;
 	private ArticleList m_selectedArticles = new ArticleList();
+	private ArticleList m_readArticles = new ArticleList();
 	private HeadlinesEventListener m_listener;
 	private OnlineActivity m_activity;
 	
@@ -78,20 +82,16 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 		return m_selectedArticles;
 	}
 	
-	public HeadlinesFragment(Feed feed) {
+	public void initialize(Feed feed) {
 		m_feed = feed;
 	}
 
-	public HeadlinesFragment(Feed feed, Article activeArticle) {
+	public void initialize(Feed feed, Article activeArticle) {
 		m_feed = feed;
 		
 		if (activeArticle != null) {
 			m_activeArticle = getArticleById(activeArticle.id);
 		}
-	}
-
-	public HeadlinesFragment() {
-		//
 	}
 	
 	@Override
@@ -533,9 +533,17 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 		
 		public static final int VIEW_COUNT = VIEW_LOADMORE+1;
 		
+		private final Integer[] origTitleColors = new Integer[VIEW_COUNT];
+		private final int titleHighScoreUnreadColor;
+
 		public ArticleListAdapter(Context context, int textViewResourceId, ArrayList<Article> items) {
 			super(context, textViewResourceId, items);
 			this.items = items;
+
+			Theme theme = context.getTheme();
+			TypedValue tv = new TypedValue();
+			theme.resolveAttribute(R.attr.headlineTitleHighScoreUnreadTextColor, tv, true);
+			titleHighScoreUnreadColor = tv.data;
 		}
 		
 		public int getViewTypeCount() {
@@ -595,6 +603,7 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 
 			if (tt != null) {
 				tt.setText(Html.fromHtml(article.title));
+				adjustTitleTextView(article.score, tt, position);
 			}
 
 			TextView ft = (TextView)v.findViewById(R.id.feed_title);
@@ -726,8 +735,24 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 			
 			return v;
 		}
-	}
 
+		private void adjustTitleTextView(int score, TextView tv, int position) {
+			int viewType = getItemViewType(position);
+			if (origTitleColors[viewType] == null)
+				// store original color
+				origTitleColors[viewType] = Integer.valueOf(tv.getCurrentTextColor());
+
+			if (score < -500) {
+				tv.setPaintFlags(tv.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
+			} else if (score > 500) {
+				tv.setTextColor(titleHighScoreUnreadColor);
+				tv.setPaintFlags(tv.getPaintFlags() & ~Paint.STRIKE_THRU_TEXT_FLAG);
+			} else {
+				tv.setTextColor(origTitleColors[viewType].intValue());
+				tv.setPaintFlags(tv.getPaintFlags() & ~Paint.STRIKE_THRU_TEXT_FLAG);
+			}
+		}
+	}
 
 
 	public void notifyUpdated() {
@@ -797,11 +822,27 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 		if (!m_refreshInProgress && m_articles.findById(-1) != null && firstVisibleItem + visibleItemCount == m_articles.size()) {
 			refresh(true);
 		}
+
+		if (m_prefs.getBoolean("headlines_mark_read_scroll", false) && firstVisibleItem > 0) {
+			Article a = m_articles.get(firstVisibleItem - 1);
+
+			if (a != null && a.unread) {
+				a.unread = false;
+				m_readArticles.add(a);
+				m_feed.unread--;
+			} 
+		}
 	}
 
 	@Override
 	public void onScrollStateChanged(AbsListView view, int scrollState) {
-		// no-op
+		if (scrollState == SCROLL_STATE_IDLE && m_prefs.getBoolean("headlines_mark_read_scroll", false)) {
+			if (!m_readArticles.isEmpty()) {
+				m_activity.toggleArticlesUnread(m_readArticles);
+				m_activity.refresh(false);
+				m_readArticles.clear();
+			}
+		}
 	}
 
 	public Article getActiveArticle() {
