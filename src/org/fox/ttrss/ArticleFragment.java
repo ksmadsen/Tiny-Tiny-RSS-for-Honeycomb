@@ -1,7 +1,9 @@
 package org.fox.ttrss;
 
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -19,6 +21,7 @@ import android.content.SharedPreferences;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.text.Html;
@@ -86,13 +89,12 @@ public class ArticleFragment extends Fragment implements GestureDetector.OnDoubl
 	@SuppressLint("NewApi")
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {    	
-
 		m_activity.setProgressBarVisibility(true);
 		
 		if (savedInstanceState != null) {
 			m_article = savedInstanceState.getParcelable("article");
 		}
-		
+
 		View view = inflater.inflate(R.layout.article_fragment, container, false);
 		
 		if (m_article != null) {
@@ -115,9 +117,11 @@ public class ArticleFragment extends Fragment implements GestureDetector.OnDoubl
 					@Override
 					public void onClick(View v) {
 						try {
-							Intent intent = new Intent(Intent.ACTION_VIEW, 
-									Uri.parse(m_article.link.trim()));
-								startActivity(intent);
+							URL url = new URL(m_article.link.trim());
+							String uri = new URI(url.getProtocol(), url.getUserInfo(), url.getHost(),
+								url.getPort(), url.getPath(), url.getQuery(), url.getRef()).toString();
+							Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
+							startActivity(intent);
 						} catch (Exception e) {
 							e.printStackTrace();
 							m_activity.toast(R.string.error_other_error);
@@ -139,11 +143,12 @@ public class ArticleFragment extends Fragment implements GestureDetector.OnDoubl
 						@Override
 						public void onClick(View v) {
 							try {
-								String link = (m_article.comments_link != null && m_article.comments_link.length() > 0) ?
-									m_article.comments_link : m_article.link; 
-								
+								URL url = new URL((m_article.comments_link != null && m_article.comments_link.length() > 0) ?
+									m_article.comments_link : m_article.link);
+								String uri = new URI(url.getProtocol(), url.getUserInfo(), url.getHost(),
+										url.getPort(), url.getPath(), url.getQuery(), url.getRef()).toString();
 								Intent intent = new Intent(Intent.ACTION_VIEW, 
-										Uri.parse(link.trim()));
+										Uri.parse(uri));
 									startActivity(intent);
 							} catch (Exception e) {
 								e.printStackTrace();
@@ -161,7 +166,12 @@ public class ArticleFragment extends Fragment implements GestureDetector.OnDoubl
 			
 			if (web != null) {
 				registerForContextMenu(web);
-				
+
+			    // prevent flicker in ics
+			    if (android.os.Build.VERSION.SDK_INT >= 11) {
+			    	web.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+			    }
+
 				web.setWebChromeClient(new WebChromeClient() {					
 					@Override
 	                public void onProgressChanged(WebView view, int progress) {
@@ -184,18 +194,16 @@ public class ArticleFragment extends Fragment implements GestureDetector.OnDoubl
 				
 				WebSettings ws = web.getSettings();
 				ws.setSupportZoom(true);
-				ws.setBuiltInZoomControls(false);
+				ws.setBuiltInZoomControls(true);
+				
+				if (!m_activity.isCompatMode())
+					ws.setDisplayZoomControls(false);
 
 				web.getSettings().setLayoutAlgorithm(LayoutAlgorithm.SINGLE_COLUMN);
 
 				TypedValue tv = new TypedValue();				
 			    getActivity().getTheme().resolveAttribute(R.attr.linkColor, tv, true);
 			    
-			    // prevent flicker in ics
-			    if (android.os.Build.VERSION.SDK_INT >= 11) {
-			    	web.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-			    }
-
 				if (m_prefs.getString("theme", "THEME_DARK").equals("THEME_DARK")) {
 					cssOverride = "body { background : transparent; color : #e0e0e0}";
 				} else if (m_prefs.getString("theme", "THEME_DARK").equals("THEME_DARK_GRAY")) {
@@ -208,6 +216,8 @@ public class ArticleFragment extends Fragment implements GestureDetector.OnDoubl
 				String hexColor = String.format("#%06X", (0xFFFFFF & tv.data));
 			    cssOverride += " a:link {color: "+hexColor+";} a:visited { color: "+hexColor+";}";
 
+			    cssOverride += " table { width : 100%; }";
+			    
 				String articleContent = m_article.content != null ? m_article.content : "";
 				
 				Document doc = Jsoup.parse(articleContent);
@@ -283,13 +293,15 @@ public class ArticleFragment extends Fragment implements GestureDetector.OnDoubl
 				
 				if (m_activity.isSmallScreen())
 					web.setOnTouchListener(m_gestureListener);
+				
+				web.setVisibility(View.VISIBLE);
 			}
 			
 			TextView dv = (TextView)view.findViewById(R.id.date);
 			
 			if (dv != null) {
 				Date d = new Date(m_article.updated * 1000L);
-				SimpleDateFormat df = new SimpleDateFormat("EEE, dd MMM yyyy, HH:mm");
+				DateFormat df = new SimpleDateFormat("MMM dd, HH:mm");
 				dv.setText(df.format(d));
 			}
 			
@@ -316,7 +328,7 @@ public class ArticleFragment extends Fragment implements GestureDetector.OnDoubl
 
 			if (author != null) {
 				if (m_article.author != null && m_article.author.length() > 0) {
-					author.setText(m_article.author);				
+					author.setText(getString(R.string.author_formatted, m_article.author));				
 				} else {
 					author.setVisibility(View.GONE);
 				}
@@ -400,44 +412,9 @@ public class ArticleFragment extends Fragment implements GestureDetector.OnDoubl
 		return false;
 	}
 
-	private void onLeftSideTapped() {
-		ArticlePager ap = (ArticlePager) m_activity.getSupportFragmentManager().findFragmentByTag(CommonActivity.FRAG_ARTICLE);
-		
-		if (ap != null && ap.isAdded()) {
-			ap.selectArticle(false);
-		}
-	}
-	
-	private void onRightSideTapped() {
-		ArticlePager ap = (ArticlePager) m_activity.getSupportFragmentManager().findFragmentByTag(CommonActivity.FRAG_ARTICLE);
-		
-		if (ap != null && ap.isAdded()) {
-			ap.selectArticle(true);
-		}
-	}
-	
 	@Override
-	public boolean onSingleTapConfirmed(MotionEvent e) {
-
-		int width = getView().getWidth();		
-		int x = Math.round(e.getX());
-		
-		if (x <= width/15) {
-			onLeftSideTapped();
-			return true;
-		} else if (x >= width-(width/15)) {
-			onRightSideTapped();
-			return true;
-		} /* else if (!m_activity.isCompatMode()) {
-			ActionBar bar = m_activity.getSupportActionBar();
-			
-			if (bar.isShowing()) {
-				bar.hide();
-			} else {
-				bar.show();
-			}
-		} */
+	public boolean onSingleTapConfirmed(MotionEvent arg0) {
+		// TODO Auto-generated method stub
 		return false;
 	}
-
 }

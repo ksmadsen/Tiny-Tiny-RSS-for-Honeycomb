@@ -5,6 +5,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
 
+import org.fox.ttrss.CommonActivity;
 import org.fox.ttrss.GlobalState;
 import org.fox.ttrss.R;
 import org.jsoup.Jsoup;
@@ -33,11 +34,17 @@ import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.animation.AlphaAnimation;
+import android.view.animation.Animation;
+import android.view.animation.AnimationSet;
+import android.view.animation.LayoutAnimationController;
+import android.view.animation.TranslateAnimation;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.CheckBox;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -244,16 +251,24 @@ public class OfflineHeadlinesFragment extends Fragment implements OnItemClickLis
 		}
 
 		refresh();
+		
+		m_activity.initMenu();
 	}
 	
 	public void refresh() {
-		if (m_cursor != null && !m_cursor.isClosed()) m_cursor.close();
-		
-		m_cursor = createCursor();
-		
-		if (m_cursor != null) {
-			m_adapter.changeCursor(m_cursor);
-			m_adapter.notifyDataSetChanged();
+		try {
+			if (!isAdded()) return;
+			
+			if (m_cursor != null && !m_cursor.isClosed()) m_cursor.close();
+			
+			m_cursor = createCursor();
+			
+			if (m_cursor != null && m_adapter != null) {
+				m_adapter.changeCursor(m_cursor);
+				m_adapter.notifyDataSetChanged();
+			}
+		} catch (NullPointerException e) {
+			e.printStackTrace();
 		}
 	}
 	
@@ -278,12 +293,31 @@ public class OfflineHeadlinesFragment extends Fragment implements OnItemClickLis
 		m_adapter = new ArticleListAdapter(getActivity(), R.layout.headlines_row, m_cursor,
 				new String[] { "title" }, new int[] { R.id.title }, 0);
 		
+		/* if (!m_activity.isCompatMode()) {
+			AnimationSet set = new AnimationSet(true);
+	
+		    Animation animation = new AlphaAnimation(0.0f, 1.0f);
+		    animation.setDuration(500);
+		    set.addAnimation(animation);
+	
+		    animation = new TranslateAnimation(
+		        Animation.RELATIVE_TO_SELF, 50.0f,Animation.RELATIVE_TO_SELF, 0.0f,
+		        Animation.RELATIVE_TO_SELF, 0.0f,Animation.RELATIVE_TO_SELF, 0.0f
+		    );
+		    animation.setDuration(1000);
+		    set.addAnimation(animation);
+	
+		    LayoutAnimationController controller = new LayoutAnimationController(set, 0.5f);
+	
+		    list.setLayoutAnimation(controller);
+		} */
+		
 		list.setAdapter(m_adapter);
 		list.setOnItemClickListener(this);
 		list.setEmptyView(view.findViewById(R.id.no_headlines));
 		registerForContextMenu(list);
 
-		if (m_activity.isSmallScreen() || m_activity.isPortrait())
+		if (m_activity.isSmallScreen())
 			view.findViewById(R.id.headlines_fragment).setPadding(0, 0, 0, 0);
 		
 		getActivity().setProgressBarIndeterminateVisibility(false);
@@ -298,6 +332,20 @@ public class OfflineHeadlinesFragment extends Fragment implements OnItemClickLis
 			feedClause = "feed_id IN (SELECT "+BaseColumns._ID+" FROM feeds WHERE cat_id = ?)";
 		} else {
 			feedClause = "feed_id = ?";
+		}
+		
+		String viewMode = m_activity.getViewMode();
+		
+		if ("adaptive".equals(viewMode)) {
+			// TODO: implement adaptive			
+		} else if ("marked".equals(viewMode)) {
+			feedClause += "AND (marked = 1)";
+		} else if ("published".equals(viewMode)) {
+			feedClause += "AND (published = 1)";
+		} else if ("unread".equals(viewMode)) {
+			feedClause += "AND (unread = 1)";
+		} else { // all_articles
+			//
 		}
 		
 		String orderBy = (m_prefs.getBoolean("offline_oldest_first", false)) ? "updated" : "updated DESC";
@@ -521,9 +569,24 @@ public class OfflineHeadlinesFragment extends Fragment implements OnItemClickLis
 			if (te != null) {
 				String excerpt = Jsoup.parse(article.getString(article.getColumnIndex("content"))).text(); 
 				
-				if (excerpt.length() > 100)
-					excerpt = excerpt.substring(0, 100) + "...";
+				if (excerpt.length() > CommonActivity.EXCERPT_MAX_SIZE)
+					excerpt = excerpt.substring(0, CommonActivity.EXCERPT_MAX_SIZE) + "...";
 				
+				int fontSize = -1;
+				
+				switch (Integer.parseInt(m_prefs.getString("headlines_font_size", "0"))) {
+				case 0:
+					fontSize = 13;
+					break;
+				case 1:
+					fontSize = 16;
+					break;
+				case 2:
+					fontSize = 18;
+					break;		
+				}
+				
+				te.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);			
 				te.setText(excerpt);
 			}       	
 
@@ -531,8 +594,14 @@ public class OfflineHeadlinesFragment extends Fragment implements OnItemClickLis
 
 			if (ta != null) {
 				int authorIndex = article.getColumnIndex("author");
-				if (authorIndex >= 0)
-					ta.setText(article.getString(authorIndex));
+				if (authorIndex >= 0) {
+					String author = article.getString(authorIndex);
+					
+					if (author != null && author.length() > 0)
+						ta.setText(getString(R.string.author_formatted, author));
+					else
+						ta.setText("");
+				}
 			}
 
 			/* ImageView separator = (ImageView)v.findViewById(R.id.headlines_separator);
@@ -576,18 +645,20 @@ public class OfflineHeadlinesFragment extends Fragment implements OnItemClickLis
 				});
 			}
 			
-			/* ImageButton ib = (ImageButton) v.findViewById(R.id.article_menu_button);
+			ImageButton ib = (ImageButton) v.findViewById(R.id.article_menu_button);
 			
 			if (ib != null) {
-				ib.setVisibility(android.os.Build.VERSION.SDK_INT >= 10 ? View.VISIBLE : View.GONE);				
+				if (m_activity.isDarkTheme())
+					ib.setImageResource(R.drawable.ic_mailbox_collapsed_holo_dark);
+				
 				ib.setOnClickListener(new OnClickListener() {					
 					@Override
 					public void onClick(View v) {
 						getActivity().openContextMenu(v);
 					}
 				});								
-			} */
-			
+			}
+
 			return v;
 		}
 

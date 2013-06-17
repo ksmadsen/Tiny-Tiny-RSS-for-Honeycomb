@@ -34,6 +34,11 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
+import android.view.animation.AlphaAnimation;
+import android.view.animation.Animation;
+import android.view.animation.AnimationSet;
+import android.view.animation.LayoutAnimationController;
+import android.view.animation.TranslateAnimation;
 import android.widget.AbsListView;
 import android.widget.AbsListView.OnScrollListener;
 import android.widget.AdapterView;
@@ -41,6 +46,7 @@ import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -240,7 +246,7 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 		} else {
 			AdapterContextMenuInfo info = (AdapterContextMenuInfo)menuInfo;
 			Article article = getArticleAtPosition(info.position);
-			menu.setHeaderTitle(article.title);
+			menu.setHeaderTitle(Html.fromHtml(article.title));
 			menu.setGroupVisible(R.id.menu_group_single_article, true);
 		}
 		
@@ -266,13 +272,33 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 
 		ListView list = (ListView)view.findViewById(R.id.headlines);		
 		m_adapter = new ArticleListAdapter(getActivity(), R.layout.headlines_row, (ArrayList<Article>)m_articles);
+		
+		/* if (!m_activity.isCompatMode()) {
+			AnimationSet set = new AnimationSet(true);
+	
+		    Animation animation = new AlphaAnimation(0.0f, 1.0f);
+		    animation.setDuration(500);
+		    set.addAnimation(animation);
+	
+		    animation = new TranslateAnimation(
+		        Animation.RELATIVE_TO_SELF, 50.0f,Animation.RELATIVE_TO_SELF, 0.0f,
+		        Animation.RELATIVE_TO_SELF, 0.0f,Animation.RELATIVE_TO_SELF, 0.0f
+		    );
+		    animation.setDuration(1000);
+		    set.addAnimation(animation);
+	
+		    LayoutAnimationController controller = new LayoutAnimationController(set, 0.5f);
+	
+		    list.setLayoutAnimation(controller);
+		} */
+		
 		list.setAdapter(m_adapter);
 		list.setOnItemClickListener(this);
 		list.setOnScrollListener(this);
 		//list.setEmptyView(view.findViewById(R.id.no_headlines));
 		registerForContextMenu(list);
 
-		if (m_activity.isSmallScreen() || m_activity.isPortrait())
+		if (m_activity.isSmallScreen())
 			view.findViewById(R.id.headlines_fragment).setPadding(0, 0, 0, 0);
 
 		Log.d(TAG, "onCreateView, feed=" + m_feed);
@@ -336,7 +362,7 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 
 	@SuppressWarnings({ "unchecked", "serial" })
 	public void refresh(boolean append) {
-		if (m_activity != null) {
+		if (m_activity != null && m_feed != null) {
 			m_refreshInProgress = true;
 
 			m_activity.setProgressBarVisibility(true);
@@ -667,9 +693,24 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 				} else {
 					String excerpt = Jsoup.parse(articleContent).text(); 
 					
-					if (excerpt.length() > 200)
-						excerpt = excerpt.substring(0, 200) + "...";
+					if (excerpt.length() > CommonActivity.EXCERPT_MAX_SIZE)
+						excerpt = excerpt.substring(0, CommonActivity.EXCERPT_MAX_SIZE) + "...";
+
+					int fontSize = -1;
 					
+					switch (Integer.parseInt(m_prefs.getString("headlines_font_size", "0"))) {
+					case 0:
+						fontSize = 13;
+						break;
+					case 1:
+						fontSize = 16;
+						break;
+					case 2:
+						fontSize = 18;
+						break;		
+					}
+					
+					te.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
 					te.setText(excerpt);
 				}
 			}       	
@@ -678,9 +719,12 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 			
 			TextView author = (TextView)v.findViewById(R.id.author);
 			
-			if (author != null) {
-				author.setText(articleAuthor);
-			}
+			if (author != null) 
+				if (articleAuthor.length() > 0) {
+					author.setText(getString(R.string.author_formatted, articleAuthor));
+				} else {
+					author.setText("");
+				}
 			
 			/* ImageView separator = (ImageView)v.findViewById(R.id.headlines_separator);
 			
@@ -721,17 +765,19 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 				});
 			}
 			
-			/* ImageButton ib = (ImageButton) v.findViewById(R.id.article_menu_button);
+			ImageButton ib = (ImageButton) v.findViewById(R.id.article_menu_button);
 			
 			if (ib != null) {
-				ib.setVisibility(android.os.Build.VERSION.SDK_INT >= 10 ? View.VISIBLE : View.GONE);
+				if (m_activity.isDarkTheme())
+					ib.setImageResource(R.drawable.ic_mailbox_collapsed_holo_dark);
+				
 				ib.setOnClickListener(new OnClickListener() {					
 					@Override
 					public void onClick(View v) {
 						getActivity().openContextMenu(v);
 					}
 				});								
-			} */
+			}
 			
 			return v;
 		}

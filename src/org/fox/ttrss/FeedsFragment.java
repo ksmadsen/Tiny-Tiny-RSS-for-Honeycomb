@@ -17,6 +17,7 @@ import org.fox.ttrss.types.Feed;
 import org.fox.ttrss.types.FeedCategory;
 import org.fox.ttrss.types.FeedList;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -25,6 +26,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.http.AndroidHttpClient;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.preference.PreferenceManager;
@@ -33,6 +35,7 @@ import android.util.Base64;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
+import android.view.View.OnClickListener;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
@@ -41,6 +44,7 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -66,6 +70,7 @@ public class FeedsFragment extends Fragment implements OnItemClickListener, OnSh
 		m_activeCategory = cat;
 	}
 	
+	@SuppressLint("DefaultLocale")
 	class FeedUnreadComparator implements Comparator<Feed> {
 
 		@Override
@@ -73,37 +78,39 @@ public class FeedsFragment extends Fragment implements OnItemClickListener, OnSh
 			if (a.unread != b.unread)
 					return b.unread - a.unread;
 				else
-					return a.title.compareTo(b.title);
+					return a.title.toUpperCase().compareTo(b.title.toUpperCase());
 			}
 		
 	}
 	
 
+	@SuppressLint("DefaultLocale")
 	class FeedTitleComparator implements Comparator<Feed> {
 
 		@Override
 		public int compare(Feed a, Feed b) {
 			if (a.is_cat && b.is_cat)
-				return a.title.compareTo(b.title);
+				return a.title.toUpperCase().compareTo(b.title.toUpperCase());
 			else if (a.is_cat && !b.is_cat)
 				return -1;
 			else if (!a.is_cat && b.is_cat)
 				return 1;
 			else if (a.id >= 0 && b.id >= 0)
-				return a.title.compareTo(b.title);
+				return a.title.toUpperCase().compareTo(b.title.toUpperCase());
 			else
 				return a.id - b.id;			
 		}
 		
 	}
 
+	@SuppressLint("DefaultLocale")
 	class FeedOrderComparator implements Comparator<Feed> {
 
 		@Override
 		public int compare(Feed a, Feed b) {			
 			if (a.id >= 0 && b.id >= 0)
 				if (a.is_cat && b.is_cat)
-					return a.title.compareTo(b.title);
+					return a.title.toUpperCase().compareTo(b.title.toUpperCase());
 				else if (a.is_cat && !b.is_cat)
 					return -1;
 				else if (!a.is_cat && b.is_cat) 
@@ -111,7 +118,7 @@ public class FeedsFragment extends Fragment implements OnItemClickListener, OnSh
 				else if (a.order_id != 0 && b.order_id != 0)
 					return a.order_id - b.order_id;
 				else
-					return a.title.compareTo(b.title);
+					return a.title.toUpperCase().compareTo(b.title.toUpperCase());
 			else
 				return a.id - b.id;
 		}
@@ -279,7 +286,6 @@ public class FeedsFragment extends Fragment implements OnItemClickListener, OnSh
 	@SuppressWarnings({ "unchecked", "serial" })
 	public void refresh(boolean background) {
 		//FeedCategory cat = m_onlineServices.getActiveCategory();
-
 		m_activity.setProgressBarVisibility(true);
 		
 		final int catId = (m_activeCategory != null) ? m_activeCategory.id : -4;
@@ -345,7 +351,11 @@ public class FeedsFragment extends Fragment implements OnItemClickListener, OnSh
 							}
 
 							GetIconsTask git = new GetIconsTask(baseUrl);
-							git.execute(m_feeds);
+							
+							if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB)
+								git.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, m_feeds);
+							else
+								git.execute(m_feeds);
 							
 							m_feedIconsChecked = true;
 						}
@@ -523,6 +533,20 @@ public class FeedsFragment extends Fragment implements OnItemClickListener, OnSh
 					icon.setImageResource(feed.unread > 0 ? R.drawable.ic_rss : R.drawable.ic_rss_bw);
 				}
 				
+			}
+			
+			ImageButton ib = (ImageButton) v.findViewById(R.id.feed_menu_button);
+			
+			if (ib != null) {
+				if (m_activity.isDarkTheme())
+					ib.setImageResource(R.drawable.ic_mailbox_collapsed_holo_dark);
+				
+				ib.setOnClickListener(new OnClickListener() {					
+					@Override
+					public void onClick(View v) {
+						getActivity().openContextMenu(v);
+					}
+				});								
 			}
 
 			return v;

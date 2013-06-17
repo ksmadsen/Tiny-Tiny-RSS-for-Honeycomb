@@ -11,6 +11,7 @@ import org.fox.ttrss.types.Feed;
 import org.fox.ttrss.types.FeedCategory;
 import org.fox.ttrss.types.FeedCategoryList;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -21,6 +22,7 @@ import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
+import android.view.View.OnClickListener;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
@@ -29,6 +31,7 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -46,29 +49,32 @@ public class FeedCategoriesFragment extends Fragment implements OnItemClickListe
 	private FeedCategory m_selectedCat;
 	private FeedsActivity m_activity;
 
+	@SuppressLint("DefaultLocale")
 	class CatUnreadComparator implements Comparator<FeedCategory> {
 		@Override
 		public int compare(FeedCategory a, FeedCategory b) {
 			if (a.unread != b.unread)
 					return b.unread - a.unread;
 				else
-					return a.title.compareTo(b.title);
+					return a.title.toUpperCase().compareTo(b.title.toUpperCase());
 			}
 	}
 	
 
+	@SuppressLint("DefaultLocale")
 	class CatTitleComparator implements Comparator<FeedCategory> {
 
 		@Override
 		public int compare(FeedCategory a, FeedCategory b) {
 			if (a.id >= 0 && b.id >= 0)
-				return a.title.compareTo(b.title);
+				return a.title.toUpperCase().compareTo(b.title.toUpperCase());
 			else
 				return a.id - b.id;
 		}
 		
 	}
 
+	@SuppressLint("DefaultLocale")
 	class CatOrderComparator implements Comparator<FeedCategory> {
 
 		@Override
@@ -77,7 +83,7 @@ public class FeedCategoriesFragment extends Fragment implements OnItemClickListe
 				if (a.order_id != 0 && b.order_id != 0)
 					return a.order_id - b.order_id;
 				else
-					return a.title.compareTo(b.title);
+					return a.title.toUpperCase().compareTo(b.title.toUpperCase());
 			else
 				return a.id - b.id;
 		}
@@ -406,6 +412,21 @@ public class FeedCategoriesFragment extends Fragment implements OnItemClickListe
 				icon.setImageResource(cat.unread > 0 ? R.drawable.ic_rss : R.drawable.ic_rss_bw);
 			}
 
+			ImageButton ib = (ImageButton) v.findViewById(R.id.feed_menu_button);
+			
+			if (ib != null) {
+				if (m_activity.isDarkTheme())
+					ib.setImageResource(R.drawable.ic_mailbox_collapsed_holo_dark);
+				
+				ib.setOnClickListener(new OnClickListener() {					
+					@Override
+					public void onClick(View v) {
+						getActivity().openContextMenu(v);
+					}
+				});								
+			}
+
+			
 			return v;
 		}
 	}
@@ -421,6 +442,8 @@ public class FeedCategoriesFragment extends Fragment implements OnItemClickListe
 	@Override
 	public void onItemClick(AdapterView<?> av, View view, int position, long id) {
 		ListView list = (ListView)av;
+		
+		Log.d(TAG, "onItemClick=" + position);
 		
 		if (list != null) {
 			FeedCategory cat = (FeedCategory)list.getItemAtPosition(position);
@@ -438,8 +461,8 @@ public class FeedCategoriesFragment extends Fragment implements OnItemClickListe
 				}
 			}
 			
-			if (!m_activity.isSmallScreen())
-				m_selectedCat = cat;
+			//if (!m_activity.isSmallScreen())
+			//	m_selectedCat = cat;
 			
 			m_adapter.notifyDataSetChanged();
 		}

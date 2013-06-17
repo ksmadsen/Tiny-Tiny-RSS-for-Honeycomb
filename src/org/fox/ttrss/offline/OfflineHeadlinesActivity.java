@@ -3,6 +3,8 @@ package org.fox.ttrss.offline;
 import org.fox.ttrss.GlobalState;
 import org.fox.ttrss.R;
 
+import com.actionbarsherlock.view.MenuItem;
+
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -13,6 +15,7 @@ import android.preference.PreferenceManager;
 import android.provider.BaseColumns;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
+import android.util.Log;
 import android.view.View;
 
 public class OfflineHeadlinesActivity extends OfflineActivity implements OfflineHeadlinesEventListener {
@@ -31,13 +34,11 @@ public class OfflineHeadlinesActivity extends OfflineActivity implements Offline
 		
 		super.onCreate(savedInstanceState);
 
-		setContentView(R.layout.headlines);
+		setContentView(R.layout.headlines_articles);
 		
-		if (!isCompatMode()) {
-			getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-		}
+		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 		
-		setSmallScreen(findViewById(R.id.headlines_fragment) == null); 
+		setSmallScreen(findViewById(R.id.sw600dp_anchor) == null); 
 		
 		if (isPortrait()) {
 			findViewById(R.id.headlines_fragment).setVisibility(View.GONE);
@@ -93,6 +94,19 @@ public class OfflineHeadlinesActivity extends OfflineActivity implements Offline
 	}
 
 	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		switch (item.getItemId()) {
+		case android.R.id.home:
+			finish();
+			overridePendingTransition(0, R.anim.right_slide_out);
+			return true;
+		default:
+			Log.d(TAG, "onOptionsItemSelected, unhandled id=" + item.getItemId());
+			return super.onOptionsItemSelected(item);
+		}
+	}
+	
+	@Override
 	public void onArticleSelected(int articleId, boolean open) {
 		SQLiteStatement stmt = getWritableDb().compileStatement(
 				"UPDATE articles SET modified = 1, unread = 0 " + "WHERE " + BaseColumns._ID
@@ -121,16 +135,13 @@ public class OfflineHeadlinesActivity extends OfflineActivity implements Offline
 	@Override
 	protected void initMenu() {
 		super.initMenu();
-
+		
 		if (m_menu != null) {
 			m_menu.setGroupVisible(R.id.menu_group_feeds, false);
 
-			OfflineHeadlinesFragment hf = (OfflineHeadlinesFragment)getSupportFragmentManager().findFragmentByTag(FRAG_HEADLINES);
+			//OfflineHeadlinesFragment hf = (OfflineHeadlinesFragment)getSupportFragmentManager().findFragmentByTag(FRAG_HEADLINES);
 			
-			m_menu.setGroupVisible(R.id.menu_group_headlines, hf != null && hf.isAdded());
-			
-			//m_menu.setGroupVisible(R.id.menu_group_headlines, hf != null && hf.getSelectedArticleCount() == 0);
-			//m_menu.setGroupVisible(R.id.menu_group_headlines_selection, hf != null && hf.getSelectedArticleCount() != 0);
+			m_menu.setGroupVisible(R.id.menu_group_headlines, !isPortrait() && !isSmallScreen());			
 			
 			Fragment af = getSupportFragmentManager().findFragmentByTag(FRAG_ARTICLE);
 			
@@ -143,5 +154,11 @@ public class OfflineHeadlinesActivity extends OfflineActivity implements Offline
 	@Override
 	public void onArticleSelected(int articleId) {
 		onArticleSelected(articleId, true);		
+	}
+
+	@Override
+	public void onBackPressed() {
+		super.onBackPressed();
+		overridePendingTransition(0, R.anim.right_slide_out);
 	}
 }

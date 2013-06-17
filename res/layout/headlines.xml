@@ -9,18 +9,17 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:gravity="center"
-        android:orientation="vertical" >
+        android:visibility="gone" >
 
         <TextView
             android:id="@+id/loading_message"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:gravity="center_horizontal"
-            android:text="@string/loading_message" />
+            android:textAppearance="?android:attr/textAppearanceLarge" />
     </LinearLayout>
 
     <FrameLayout
-        android:id="@+id/headlines_container"
+        android:id="@+id/headlines_fragment"
         android:background="?smallScreenBackground"
         android:layout_width="match_parent"
         android:layout_height="match_parent" >

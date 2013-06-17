@@ -31,13 +31,11 @@ public class HeadlinesActivity extends OnlineActivity implements HeadlinesEventL
 		
 		super.onCreate(savedInstanceState);
 
-		setContentView(R.layout.headlines);
+		setContentView(R.layout.headlines_articles);
 		
-		if (!isCompatMode()) {
-			getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-		}
+		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 		
-		setSmallScreen(findViewById(R.id.headlines_fragment) == null); 
+		setSmallScreen(findViewById(R.id.sw600dp_anchor) == null); 
 		
 		GlobalState.getInstance().load(savedInstanceState);
 
@@ -142,9 +140,9 @@ public class HeadlinesActivity extends OnlineActivity implements HeadlinesEventL
 		if (m_menu != null && getSessionId() != null) {
 			m_menu.setGroupVisible(R.id.menu_group_feeds, false);
 
-			HeadlinesFragment hf = (HeadlinesFragment)getSupportFragmentManager().findFragmentByTag(FRAG_HEADLINES);
+			//HeadlinesFragment hf = (HeadlinesFragment)getSupportFragmentManager().findFragmentByTag(FRAG_HEADLINES);
 			
-			m_menu.setGroupVisible(R.id.menu_group_headlines, !isPortrait() && hf != null && hf.isAdded());			
+			m_menu.setGroupVisible(R.id.menu_group_headlines, !isPortrait() && !isSmallScreen());			
 			
 			ArticlePager af = (ArticlePager) getSupportFragmentManager().findFragmentByTag(FRAG_ARTICLE);
 			
@@ -181,6 +179,8 @@ public class HeadlinesActivity extends OnlineActivity implements HeadlinesEventL
 	@Override
 	public void onArticleSelected(Article article, boolean open) {
 		
+		if (article == null) return;
+		
 		if (article.unread) {
 			article.unread = false;
 			saveArticleUnread(article);
@@ -203,7 +203,9 @@ public class HeadlinesActivity extends OnlineActivity implements HeadlinesEventL
 
 		} else {
 			HeadlinesFragment hf = (HeadlinesFragment) getSupportFragmentManager().findFragmentByTag(FRAG_HEADLINES);
-			hf.setActiveArticle(article);
+			if (hf != null) {
+				hf.setActiveArticle(article);
+			}
 		}
 
 		GlobalState.getInstance().m_activeArticle = article;

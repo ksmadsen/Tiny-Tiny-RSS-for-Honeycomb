@@ -12,12 +12,15 @@ import org.fox.ttrss.types.Article;
 import org.fox.ttrss.types.ArticleList;
 import org.fox.ttrss.types.Feed;
 import org.fox.ttrss.types.Label;
+import org.fox.ttrss.widget.SmallWidgetProvider;
 
 import android.annotation.TargetApi;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.appwidget.AppWidgetManager;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
@@ -152,10 +155,10 @@ public class OnlineActivity extends CommonActivity {
 
 		if (canUseProgress()) {
 			requestWindowFeature(Window.FEATURE_PROGRESS);
-		} else {
-			requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
 		}
-		
+
+		requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
+
 		setProgressBarVisibility(false);
 		setProgressBarIndeterminateVisibility(false);
 
@@ -303,9 +306,17 @@ public class OnlineActivity extends CommonActivity {
 	}
 	
 	@Override
+	public void onStop() {
+		super.onStop();
+		
+		Intent initialUpdateIntent = new Intent(SmallWidgetProvider.FORCE_UPDATE_ACTION);
+		sendBroadcast(initialUpdateIntent);
+	}
+	
+	@Override
 	public void onPause() {
 		super.onPause();
-
+		
 		unregisterReceiver(m_broadcastReceiver);
 	}
 	
@@ -621,9 +632,9 @@ public class OnlineActivity extends CommonActivity {
 		final ArticlePager ap = (ArticlePager)getSupportFragmentManager().findFragmentByTag(FRAG_ARTICLE);
 
 		switch (item.getItemId()) {
-		case android.R.id.home:
+		/* case android.R.id.home:
 			finish();
-			return true;
+			return true; */
 		case R.id.subscribe_to_feed:
 			Intent subscribe = new Intent(OnlineActivity.this, SubscribeActivity.class);
 			startActivityForResult(subscribe, 0);
@@ -746,32 +757,39 @@ public class OnlineActivity extends CommonActivity {
 			return true;
 		case R.id.headlines_mark_as_read:
 			if (hf != null) {
-				ArticleList articles = hf.getUnreadArticles();
-
-				for (Article a : articles)
-					a.unread = false;
-
-				ApiRequest req = new ApiRequest(getApplicationContext()) {
-					protected void onPostExecute(JsonElement result) {
-						if (hf.isAdded()) {
-							hf.refresh(false);
-						}
+				
+				int count = hf.getUnreadArticles().size();
+				
+				boolean confirm = m_prefs.getBoolean("confirm_headlines_catchup", true);
+				
+				if (count > 0) {
+					if (confirm) {
+						AlertDialog.Builder builder = new AlertDialog.Builder(
+								OnlineActivity.this)
+								.setMessage(getString(R.string.mark_num_headlines_as_read, count))
+								.setPositiveButton(R.string.catchup,
+										new Dialog.OnClickListener() {
+											public void onClick(DialogInterface dialog,
+													int which) {
+	
+												catchupVisibleArticles();											
+												
+											}
+										})
+								.setNegativeButton(R.string.dialog_cancel,
+										new Dialog.OnClickListener() {
+											public void onClick(DialogInterface dialog,
+													int which) {
+		
+											}
+										});
+		
+						AlertDialog dlg = builder.create();
+						dlg.show();
+					} else {
+						catchupVisibleArticles();
 					}
-				};
-
-				final String articleIds = articlesToIdString(articles);
-
-				@SuppressWarnings("serial")
-				HashMap<String, String> map = new HashMap<String, String>() {
-					{
-						put("sid", getSessionId());
-						put("op", "updateArticle");
-						put("article_ids", articleIds);
-						put("mode", "0");
-						put("field", "2");
-					}
-				};
-				req.execute(map);
+				}
 			}
 			return true;
 		case R.id.headlines_view_mode:
@@ -993,6 +1011,39 @@ public class OnlineActivity extends CommonActivity {
 		}
 	}
 	
+	protected void catchupVisibleArticles() {
+		final HeadlinesFragment hf = (HeadlinesFragment) getSupportFragmentManager().findFragmentByTag(FRAG_HEADLINES);
+		
+		if (hf != null) {
+			ArticleList articles = hf.getUnreadArticles();
+			
+			for (Article a : articles)
+				a.unread = false;
+	
+			ApiRequest req = new ApiRequest(getApplicationContext()) {
+				protected void onPostExecute(JsonElement result) {
+					if (hf.isAdded()) {
+						hf.refresh(false);
+					}
+				}
+			};
+	
+			final String articleIds = articlesToIdString(articles);
+	
+			@SuppressWarnings("serial")
+			HashMap<String, String> map = new HashMap<String, String>() {
+				{
+					put("sid", getSessionId());
+					put("op", "updateArticle");
+					put("article_ids", articleIds);
+					put("mode", "0");
+					put("field", "2");
+				}
+			};
+			req.execute(map);
+		}
+	}
+
 	public void editArticleNote(final Article article) {
 		String note = "";
 		

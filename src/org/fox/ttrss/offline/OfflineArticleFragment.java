@@ -1,5 +1,8 @@
 package org.fox.ttrss.offline;
 
+import java.net.URI;
+import java.net.URL;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -35,6 +38,7 @@ import android.view.ViewGroup;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebSettings.LayoutAlgorithm;
+import android.webkit.WebView.HitTestResult;
 import android.webkit.WebView;
 import android.widget.TextView;
 
@@ -81,8 +85,30 @@ public class OfflineArticleFragment extends Fragment implements GestureDetector.
 	public void onCreateContextMenu(ContextMenu menu, View v,
 	    ContextMenuInfo menuInfo) {
 		
-		getActivity().getMenuInflater().inflate(R.menu.article_link_context_menu, menu);
-		menu.setHeaderTitle(m_cursor.getString(m_cursor.getColumnIndex("title")));
+		//getActivity().getMenuInflater().inflate(R.menu.article_link_context_menu, menu);
+		//menu.setHeaderTitle(m_cursor.getString(m_cursor.getColumnIndex("title")));
+		
+		String title = m_cursor.getString(m_cursor.getColumnIndex("title"));
+		
+		if (v.getId() == R.id.content) {
+			HitTestResult result = ((WebView)v).getHitTestResult();
+
+			if (result != null && (result.getType() == HitTestResult.IMAGE_TYPE || result.getType() == HitTestResult.SRC_IMAGE_ANCHOR_TYPE)) {
+				menu.setHeaderTitle(result.getExtra());
+				getActivity().getMenuInflater().inflate(R.menu.article_content_img_context_menu, menu);
+				
+				/* FIXME I have no idea how to do this correctly ;( */
+				
+				m_activity.setLastContentImageHitTestUrl(result.getExtra());
+				
+			} else {
+				menu.setHeaderTitle(title);
+				getActivity().getMenuInflater().inflate(R.menu.article_link_context_menu, menu);
+			}
+		} else {
+			menu.setHeaderTitle(title);
+			getActivity().getMenuInflater().inflate(R.menu.article_link_context_menu, menu);
+		}
 		
 		super.onCreateContextMenu(menu, v, menuInfo);	
 		
@@ -125,9 +151,11 @@ public class OfflineArticleFragment extends Fragment implements GestureDetector.
 					@Override
 					public void onClick(View v) {
 						try {
-							Intent intent = new Intent(Intent.ACTION_VIEW, 
-									Uri.parse(link.trim()));
-								startActivity(intent);
+							URL url = new URL(link.trim());
+							String uri = new URI(url.getProtocol(), url.getUserInfo(), url.getHost(),
+								url.getPort(), url.getPath(), url.getQuery(), url.getRef()).toString();
+							Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
+							startActivity(intent);
 						} catch (Exception e) {
 							e.printStackTrace();
 							m_activity.toast(R.string.error_other_error);
@@ -147,6 +175,8 @@ public class OfflineArticleFragment extends Fragment implements GestureDetector.
 			WebView web = (WebView)view.findViewById(R.id.content);
 			
 			if (web != null) {
+				
+				registerForContextMenu(web);
 				
 				web.setWebChromeClient(new WebChromeClient() {					
 					@Override
@@ -170,7 +200,10 @@ public class OfflineArticleFragment extends Fragment implements GestureDetector.
 				
 				WebSettings ws = web.getSettings();
 				ws.setSupportZoom(true);
-				ws.setBuiltInZoomControls(false);
+				ws.setBuiltInZoomControls(true);
+				
+				if (!m_activity.isCompatMode())
+					ws.setDisplayZoomControls(false);
 				
 				web.getSettings().setLayoutAlgorithm(LayoutAlgorithm.SINGLE_COLUMN);
 
@@ -194,6 +227,8 @@ public class OfflineArticleFragment extends Fragment implements GestureDetector.
 				String hexColor = String.format("#%06X", (0xFFFFFF & tv.data));
 			    cssOverride += " a:link {color: "+hexColor+";} a:visited { color: "+hexColor+";}";
 				
+			    cssOverride += " table { width : 100%; }";
+			    
 				String articleContent = m_cursor.getString(m_cursor.getColumnIndex("content"));
 				Document doc = Jsoup.parse(articleContent);
 					
@@ -258,7 +293,7 @@ public class OfflineArticleFragment extends Fragment implements GestureDetector.
 			
 			if (dv != null) {
 				Date d = new Date(m_cursor.getInt(m_cursor.getColumnIndex("updated")) * 1000L);
-				SimpleDateFormat df = new SimpleDateFormat("EEE, dd MMM yyyy, HH:mm");
+				DateFormat df = new SimpleDateFormat("MMM dd, HH:mm");
 				dv.setText(df.format(d));
 			}
 			
@@ -332,9 +367,8 @@ public class OfflineArticleFragment extends Fragment implements GestureDetector.
 			}
 			
 			@Override
-			public void onLongPress(MotionEvent e) {
-				// TODO Auto-generated method stub
-				
+			public void onLongPress(MotionEvent e) {			
+				m_activity.openContextMenu(getView());		
 			}
 			
 			@Override
@@ -366,46 +400,9 @@ public class OfflineArticleFragment extends Fragment implements GestureDetector.
 		return false;
 	}
 
-	private void onLeftSideTapped() {
-		OfflineArticlePager ap = (OfflineArticlePager) m_activity.getSupportFragmentManager().findFragmentByTag(CommonActivity.FRAG_ARTICLE);
-		
-		if (ap != null && ap.isAdded()) {
-			ap.selectArticle(false);
-		}
-	}
-	
-	private void onRightSideTapped() {
-		OfflineArticlePager ap = (OfflineArticlePager) m_activity.getSupportFragmentManager().findFragmentByTag(CommonActivity.FRAG_ARTICLE);
-		
-		if (ap != null && ap.isAdded()) {
-			ap.selectArticle(true);
-		}
-	}
-	
 	@Override
 	public boolean onSingleTapConfirmed(MotionEvent e) {
-		
-		int width = getView().getWidth();		
-		int x = Math.round(e.getX());
-		
-		if (x <= width/15) {
-			onLeftSideTapped();
-			return true;
-		} else if (x >= width-(width/15)) {
-			onRightSideTapped();
-			return true;
-		} /* else if (!m_activity.isCompatMode()) {
-			ActionBar bar = m_activity.getSupportActionBar();
-			
-			if (bar.isShowing()) {
-				bar.hide();
-			} else {
-				bar.show();
-			}
-		} */
-		
+		// TODO Auto-generated method stub
 		return false;
 	}
-
-
 }
