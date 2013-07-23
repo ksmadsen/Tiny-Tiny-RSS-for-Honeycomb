@@ -2,7 +2,10 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/libs/ActionBarSherlock/actionbarsherlock/actionbarsherlock.iml" filepath="$PROJECT_DIR$/libs/ActionBarSherlock/actionbarsherlock/actionbarsherlock.iml" />
       <module fileurl="file://$PROJECT_DIR$/org.fox.ttrss.iml" filepath="$PROJECT_DIR$/org.fox.ttrss.iml" />
+      <module fileurl="file://$PROJECT_DIR$/libs/SlidingMenu/library/slidingmenu.iml" filepath="$PROJECT_DIR$/libs/SlidingMenu/library/slidingmenu.iml" />
+      <module fileurl="file://$PROJECT_DIR$/libs/ViewPagerIndicator/library/viewpagerindicator.iml" filepath="$PROJECT_DIR$/libs/ViewPagerIndicator/library/viewpagerindicator.iml" />
     </modules>
   </component>
 </project>
