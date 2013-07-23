@@ -34,14 +34,10 @@ public class FeedsActivity extends OnlineActivity implements HeadlinesEventListe
 	protected long m_lastRefresh = 0;
 	
 	private boolean m_actionbarUpEnabled = false;
-<<<<<<< HEAD
-
-=======
 	private int m_actionbarRevertDepth = 0;
 	private SlidingMenu m_slidingMenu;
 	private boolean m_feedIsSelected = false;
-	
->>>>>>> 2ad9f766e7df2002170f43b2bf4a6442286ca9f2
+
 	@SuppressLint("NewApi")
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -92,15 +88,12 @@ public class FeedsActivity extends OnlineActivity implements HeadlinesEventListe
 
 			FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
 				
-<<<<<<< HEAD
 				AppRater.appLaunched(this);
 	//			checkTrial(true);
-=======
 			if (m_prefs.getBoolean("enable_cats", false)) {
 				ft.replace(R.id.feeds_fragment, new FeedCategoriesFragment(), FRAG_CATS);				
 			} else {
 				ft.replace(R.id.feeds_fragment, new FeedsFragment(), FRAG_FEEDS);
->>>>>>> 2ad9f766e7df2002170f43b2bf4a6442286ca9f2
 			}
 
 			ft.commit();
