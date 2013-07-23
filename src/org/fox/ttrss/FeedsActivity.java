@@ -88,8 +88,6 @@ public class FeedsActivity extends OnlineActivity implements HeadlinesEventListe
 
 			FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
 				
-				AppRater.appLaunched(this);
-	//			checkTrial(true);
 			if (m_prefs.getBoolean("enable_cats", false)) {
 				ft.replace(R.id.feeds_fragment, new FeedCategoriesFragment(), FRAG_CATS);				
 			} else {
@@ -99,7 +97,7 @@ public class FeedsActivity extends OnlineActivity implements HeadlinesEventListe
 			ft.commit();
 				
 			AppRater.appLaunched(this);
-			checkTrial(true);
+//			checkTrial(true);
 
 		} else { // savedInstanceState != null
 			m_actionbarUpEnabled = savedInstanceState.getBoolean("actionbarUpEnabled");
