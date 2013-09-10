@@ -299,8 +299,8 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 		//list.setEmptyView(view.findViewById(R.id.no_headlines));
 		registerForContextMenu(list);
 
-		if (m_activity.isSmallScreen())
-			view.findViewById(R.id.headlines_fragment).setPadding(0, 0, 0, 0);
+		//if (m_activity.isSmallScreen())
+		//view.findViewById(R.id.headlines_fragment).setPadding(0, 0, 0, 0);
 
 		Log.d(TAG, "onCreateView, feed=" + m_feed);
 		
@@ -430,11 +430,29 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 			int skip = 0;
 			
 			if (append) {
+				// adaptive, all_articles, marked, published, unread
+				String viewMode = m_activity.getViewMode();
+				int numUnread = 0;
+				int numAll = m_articles.size();
+				
 				for (Article a : m_articles) {
-					if (a.unread) ++skip;
+					if (a.unread) ++numUnread;
 				}
 				
-				if (skip == 0) skip = m_articles.size();
+				if ("marked".equals(viewMode)) {
+					skip = numAll;
+				} else if ("published".equals(viewMode)) {
+					skip = numAll;
+				} else if ("unread".equals(viewMode)) {
+					skip = numUnread;					
+				} else if (m_searchQuery != null && m_searchQuery.length() > 0) {
+					skip = numAll;
+				} else if ("adaptive".equals(viewMode)) {
+					skip = numUnread > 0 ? numUnread : numAll;
+				} else {
+					skip = numAll;
+				}
+				
 			} else {
 				m_activity.setLoadingStatus(R.string.blank, true);
 			}
@@ -777,13 +795,13 @@ public class HeadlinesFragment extends Fragment implements OnItemClickListener, 
 				});
 			}
 			
-			ImageButton ib = (ImageButton) v.findViewById(R.id.article_menu_button);
+			ImageView iv = (ImageView) v.findViewById(R.id.article_menu_button);
 			
-			if (ib != null) {
-				if (m_activity.isDarkTheme())
-					ib.setImageResource(R.drawable.ic_mailbox_collapsed_holo_dark);
+			if (iv != null) {
+				//if (m_activity.isDarkTheme())
+				//	ib.setImageResource(R.drawable.ic_mailbox_collapsed_holo_dark);
 				
-				ib.setOnClickListener(new OnClickListener() {					
+				iv.setOnClickListener(new OnClickListener() {					
 					@Override
 					public void onClick(View v) {
 						getActivity().openContextMenu(v);
